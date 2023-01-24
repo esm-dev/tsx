@@ -21,8 +21,6 @@ pub struct DependencyDescriptor {
 
 /// A Resolver to resolve esm import/export URL.
 pub struct Resolver {
-  /// hmr.js uri
-  pub hmr_js_url: String,
   /// the text specifier associated with the import/export statement.
   pub specifier: String,
   /// a flag indicating if the specifier is a remote(http) url.
@@ -42,14 +40,12 @@ pub struct Resolver {
 impl Resolver {
   pub fn new(
     specifier: &str,
-    hmr_js_url: &str,
     import_map: ImportMap,
     version_map: HashMap<String, String>,
     global_version: Option<String>,
     is_dev: bool,
   ) -> Self {
     Resolver {
-      hmr_js_url: hmr_js_url.into(),
       specifier: specifier.into(),
       specifier_is_remote: is_http_url(specifier),
       deps: Vec::new(),

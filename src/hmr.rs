@@ -3,18 +3,39 @@ use crate::swc_helpers::{
   import_name, is_call_expr_by_name, new_member_expr, new_str, pat_id, rename_var_decl, simple_member_expr,
   window_assign,
 };
+use serde::Deserialize;
 use std::{cell::RefCell, rc::Rc};
 use swc_common::DUMMY_SP;
 use swc_ecmascript::ast::*;
 use swc_ecmascript::utils::quote_ident;
 use swc_ecmascript::visit::{noop_fold_type, Fold};
 
-pub fn hmr(resolver: Rc<RefCell<Resolver>>) -> impl Fold {
-  HmrFold { resolver }
+#[derive(Deserialize, Clone)]
+#[serde(rename_all = "camelCase")]
+pub struct HmrOptions {
+  pub runtime_js_url: String,
+  pub react_refresh: Option<bool>,
+}
+
+impl Default for HmrOptions {
+  fn default() -> Self {
+    HmrOptions {
+      runtime_js_url: "".to_owned(),
+      react_refresh: Some(false),
+    }
+  }
+}
+
+pub fn hmr_fold(resolver: Rc<RefCell<Resolver>>, options: &HmrOptions) -> impl Fold {
+  HmrFold {
+    resolver,
+    runtime_js_url: options.runtime_js_url.to_owned(),
+  }
 }
 
 pub struct HmrFold {
   resolver: Rc<RefCell<Resolver>>,
+  runtime_js_url: String,
 }
 
 impl Fold for HmrFold {
@@ -25,7 +46,6 @@ impl Fold for HmrFold {
     let resolver = self.resolver.borrow();
     let mut items = Vec::<ModuleItem>::new();
     let mut react_refresh = false;
-    let hmr_js_url = resolver.hmr_js_url.to_owned();
 
     // import __CREATE_HOT_CONTEXT__ from "/_hmr.js"
     items.push(ModuleItem::ModuleDecl(ModuleDecl::Import(ImportDecl {
@@ -34,7 +54,7 @@ impl Fold for HmrFold {
         span: DUMMY_SP,
         local: quote_ident!("__CREATE_HOT_CONTEXT__"),
       })],
-      src: Box::new(new_str(&hmr_js_url)),
+      src: Box::new(new_str(&self.runtime_js_url)),
       type_only: false,
       asserts: None,
     })));
@@ -79,7 +99,7 @@ impl Fold for HmrFold {
           import_name("__REACT_REFRESH_RUNTIME__"),
           import_name("__REACT_REFRESH__"),
         ],
-        src: Box::new(new_str(&hmr_js_url)),
+        src: Box::new(new_str(&self.runtime_js_url)),
         type_only: false,
         asserts: None,
       })));

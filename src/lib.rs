@@ -11,6 +11,7 @@ mod swc_helpers;
 mod tests;
 
 use minifier::MinifierOptions;
+use hmr::HmrOptions;
 use resolver::{DependencyDescriptor, Resolver};
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
@@ -24,19 +25,18 @@ use wasm_bindgen::prelude::{wasm_bindgen, JsValue};
 #[derive(Deserialize)]
 #[serde(deny_unknown_fields, rename_all = "camelCase")]
 pub struct Options {
+  pub lang: Option<String>,
+  pub target: Option<String>,
   pub import_map: Option<String>,
   pub is_dev: Option<bool>,
+  pub hmr: Option<HmrOptions>,
+  pub jsx_factory: Option<String>,
+  pub jsx_fragment_factory: Option<String>,
   pub jsx_import_source: Option<String>,
-  pub jsx_pragma_frag: Option<String>,
-  pub jsx_pragma: Option<String>,
-  pub lang: Option<String>,
   pub minify: Option<MinifierOptions>,
   pub source_map: Option<bool>,
-  pub target: Option<String>,
-  pub global_version: Option<String>,
   pub version_map: Option<HashMap<String, String>>,
-  pub hmr_js_url: Option<String>,
-  pub react_refresh: Option<bool>,
+  pub global_version: Option<String>,
 }
 
 #[derive(Serialize)]
@@ -64,7 +64,6 @@ pub fn transform(specifier: &str, code: &str, options: JsValue) -> Result<JsValu
   .import_map;
   let resolver = Rc::new(RefCell::new(Resolver::new(
     specifier,
-    &options.hmr_js_url.unwrap_or("/_hmr.js".into()),
     importmap,
     options.version_map.unwrap_or_default(),
     options.global_version,
@@ -87,11 +86,11 @@ pub fn transform(specifier: &str, code: &str, options: JsValue) -> Result<JsValu
       resolver.clone(),
       &EmitOptions {
         target,
-        jsx_pragma: options.jsx_pragma,
-        jsx_pragma_frag: options.jsx_pragma_frag,
+        jsx_pragma: options.jsx_factory,
+        jsx_pragma_frag: options.jsx_fragment_factory,
         jsx_import_source: options.jsx_import_source,
-        react_refresh: options.react_refresh.unwrap_or_default(),
         minify: options.minify,
+        hmr: options.hmr,
         source_map: options.source_map.unwrap_or_default(),
       },
     )

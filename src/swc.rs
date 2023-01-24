@@ -1,5 +1,5 @@
 use crate::error::{DiagnosticBuffer, ErrorBuffer};
-use crate::hmr::hmr;
+use crate::hmr::{hmr_fold, HmrOptions};
 use crate::minifier::{MinifierOptions, MinifierPass};
 use crate::resolve_fold::resolve_fold;
 use crate::resolver::Resolver;
@@ -27,8 +27,8 @@ pub struct EmitOptions {
   pub jsx_pragma: Option<String>,
   pub jsx_pragma_frag: Option<String>,
   pub jsx_import_source: Option<String>,
-  pub react_refresh: bool,
   pub minify: Option<MinifierOptions>,
+  pub hmr: Option<HmrOptions>,
   pub source_map: bool,
 }
 
@@ -39,8 +39,8 @@ impl Default for EmitOptions {
       jsx_pragma: None,
       jsx_pragma_frag: None,
       jsx_import_source: None,
-      react_refresh: false,
       minify: None,
+      hmr: None,
       source_map: false,
     }
   }
@@ -57,7 +57,6 @@ pub struct SWC {
 impl SWC {
   /// parse source code.
   pub fn parse(specifier: &str, source: &str, target: EsVersion, lang: Option<String>) -> Result<Self, anyhow::Error> {
-    print!("--- {} {:?} {:?}\n", specifier, target, lang);
     let source_map = SourceMap::default();
     let source_file = source_map.new_source_file(FileName::Real(Path::new(specifier).to_path_buf()), source.into());
     let sm = &source_map;
@@ -227,7 +226,13 @@ impl SWC {
             Some(&self.comments),
             top_level_mark
           ),
-          options.react_refresh && !specifier_is_remote
+          options
+            .hmr
+            .as_ref()
+            .unwrap_or(&HmrOptions::default())
+            .react_refresh
+            .unwrap_or_default()
+            && !specifier_is_remote
         ),
         Optional::new(
           react::jsx(
@@ -242,7 +247,10 @@ impl SWC {
           ),
           is_jsx
         ),
-        Optional::new(hmr(resolver.clone()), is_dev && !specifier_is_remote),
+        Optional::new(
+          hmr_fold(resolver.clone(), options.hmr.as_ref().unwrap_or(&HmrOptions::default())),
+          is_dev && options.hmr.is_some() && !specifier_is_remote
+        ),
         dce::dce(
           dce::Config {
             module_mark: None,

@@ -21,7 +21,6 @@ fn transform(specifer: &str, source: &str, is_dev: bool, options: &EmitOptions) 
     SWC::parse(specifer, source, swc_ecmascript::ast::EsVersion::Es2022, None).expect("could not parse module");
   let resolver = Rc::new(RefCell::new(Resolver::new(
     specifer,
-    "/hmr.js",
     importmap,
     graph_versions,
     Some("1.0.0".into()),
@@ -194,7 +193,10 @@ fn react_refresh() {
     source,
     true,
     &EmitOptions {
-      react_refresh: true,
+      hmr:Some( HmrOptions {
+        runtime_js_url: "/hmr.js".to_owned(),
+        react_refresh: Some(true),
+      }),
       jsx_import_source: Some("https://esm.sh/react@18".to_owned()),
       ..Default::default()
     },
