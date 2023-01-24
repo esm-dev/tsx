@@ -20,12 +20,23 @@ pub struct MinifierPass {
 #[serde(rename_all = "camelCase")]
 pub struct MinifierOptions {
   pub compress: Option<bool>,
+  pub keep_names: Option<bool>,
+}
+
+impl Default for MinifierOptions {
+  fn default() -> Self {
+    MinifierOptions {
+      compress: Some(true),
+      keep_names: Some(false),
+    }
+  }
 }
 
 impl VisitMut for MinifierPass {
   noop_visit_mut_type!();
 
   fn visit_mut_module(&mut self, m: &mut Module) {
+    let keek_names = self.options.keep_names.unwrap_or_default();
     m.map_with_mut(|m| {
       optimize(
         m.into(),
@@ -39,7 +50,10 @@ impl VisitMut for MinifierPass {
             None
           },
           mangle: Some(MangleOptions {
-            top_level: true,
+            top_level: Some(true),
+            keep_class_names: keek_names,
+            keep_fn_names: keek_names,
+            keep_private_props: keek_names,
             ..Default::default()
           }),
           ..Default::default()

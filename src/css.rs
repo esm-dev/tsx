@@ -146,6 +146,7 @@ pub fn compile<'i>(filename: String, code: &'i str, config: &Config) -> Result<T
   let res = stylesheet.to_css(PrinterOptions {
     minify: config.minify.unwrap_or(false),
     source_map: source_map.as_mut(),
+    project_root:None,
     targets: config.targets,
     analyze_dependencies: if let Some(analyze_dependencies) = &config.analyze_dependencies {
       Some(lightningcss::dependencies::DependencyOptions {

@@ -200,7 +200,7 @@ impl SWC {
         ),
         Optional::new(compat::es2016(), should_enable(options.target, EsVersion::Es2016)),
         compat::reserved_words::reserved_words(),
-        helpers::inject_helpers(),
+        helpers::inject_helpers(top_level_mark),
         Optional::new(
           strip::strip_with_config(strip_config_from_emit_options(), top_level_mark),
           !is_jsx
@@ -265,7 +265,7 @@ impl SWC {
             comments: Some(self.comments.clone()),
             unresolved_mark,
             top_level_mark,
-            options: options.minify.unwrap_or(MinifierOptions { compress: Some(false) }),
+            options: options.minify.unwrap_or_default(),
           }),
           options.minify.is_some()
         ),
