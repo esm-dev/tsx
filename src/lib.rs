@@ -52,10 +52,10 @@ pub struct TransformOutput {
 }
 
 #[wasm_bindgen(js_name = "transform")]
-pub fn transform(specifier: &str, code: &str, options: JsValue) -> Result<JsValue, JsValue> {
+pub fn transform(specifier: &str, code: &str, swc_options: JsValue) -> Result<JsValue, JsValue> {
   console_error_panic_hook::set_once();
 
-  let options: Options = serde_wasm_bindgen::from_value(options).unwrap();
+  let options: Options = serde_wasm_bindgen::from_value(swc_options).unwrap();
   let importmap = import_map::parse_from_json(
     &Url::from_str("file:///").unwrap(),
     options.import_map.unwrap_or("{}".into()).as_str(),
@@ -108,8 +108,8 @@ pub fn transform(specifier: &str, code: &str, options: JsValue) -> Result<JsValu
 }
 
 #[wasm_bindgen(js_name = "transformCSS")]
-pub fn transform_css(filename: &str, code: &str, config_raw: JsValue) -> Result<JsValue, JsValue> {
-  let config: css::Config = serde_wasm_bindgen::from_value(config_raw).unwrap();
-  let res = css::compile(filename.into(), code, &config)?;
+pub fn transform_css(filename: &str, code: &str, lightningcss_config: JsValue) -> Result<JsValue, JsValue> {
+  let css_config: css::Config = serde_wasm_bindgen::from_value(lightningcss_config).unwrap();
+  let res = css::compile(filename.into(), code, &css_config)?;
   Ok(serde_wasm_bindgen::to_value(&res).unwrap())
 }

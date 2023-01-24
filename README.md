@@ -26,11 +26,11 @@ export default App() {
 `
 
 const ret = await transform("./App.tsx", code, {
-  importMap: {
+  importMap: json.stringify({
     imports: {
       "react": "https://esm.sh/react@18",
     }
-  },
+  })
   jsxImportSource: "https://esm.sh/react@18",
   isDev: true
 })
@@ -52,5 +52,5 @@ wasm-pack build --target web
 
 ```bash
 cargo test --all
-deno run -A test.mjs
+deno run -A test.ts
 ```
