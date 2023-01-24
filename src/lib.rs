@@ -24,7 +24,7 @@ use wasm_bindgen::prelude::{wasm_bindgen, JsValue};
 
 #[derive(Deserialize)]
 #[serde(deny_unknown_fields, rename_all = "camelCase")]
-pub struct Options {
+pub struct SWCOptions {
   pub lang: Option<String>,
   pub target: Option<String>,
   pub import_map: Option<String>,
@@ -41,7 +41,7 @@ pub struct Options {
 
 #[derive(Serialize)]
 #[serde(rename_all = "camelCase")]
-pub struct TransformOutput {
+pub struct SWCTransformOutput {
   pub code: String,
 
   #[serde(skip_serializing_if = "Vec::is_empty")]
@@ -55,7 +55,7 @@ pub struct TransformOutput {
 pub fn transform(specifier: &str, code: &str, swc_options: JsValue) -> Result<JsValue, JsValue> {
   console_error_panic_hook::set_once();
 
-  let options: Options = serde_wasm_bindgen::from_value(swc_options).unwrap();
+  let options: SWCOptions = serde_wasm_bindgen::from_value(swc_options).unwrap();
   let importmap = import_map::parse_from_json(
     &Url::from_str("file:///").unwrap(),
     options.import_map.unwrap_or("{}".into()).as_str(),
@@ -98,7 +98,7 @@ pub fn transform(specifier: &str, code: &str, swc_options: JsValue) -> Result<Js
   let r = resolver.borrow();
 
   Ok(
-    serde_wasm_bindgen::to_value(&TransformOutput {
+    serde_wasm_bindgen::to_value(&SWCTransformOutput {
       code,
       deps: r.deps.clone(),
       map,
