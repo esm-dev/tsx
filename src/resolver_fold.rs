@@ -1,29 +1,19 @@
 use crate::resolver::Resolver;
 use crate::swc_helpers::{is_call_expr_by_name, new_str};
 use std::{cell::RefCell, rc::Rc};
-use swc_common::{Span};
+use swc_common::Span;
 use swc_ecmascript::ast::*;
 use swc_ecmascript::visit::{noop_fold_type, Fold, FoldWith};
 
-pub fn resolve_fold(
-  resolver: Rc<RefCell<Resolver>>,
-  mark_import_src_location: bool,
-) -> impl Fold {
-  ResolveFold {
-    resolver,
-    mark_import_src_location,
-  }
+pub struct ResolverFolder {
+  pub resolver: Rc<RefCell<Resolver>>,
+  pub mark_src_location: Option<bool>,
 }
 
-pub struct ResolveFold {
-  resolver: Rc<RefCell<Resolver>>,
-  mark_import_src_location: bool,
-}
-
-impl Fold for ResolveFold {
+impl Fold for ResolverFolder {
   noop_fold_type!();
 
-  // fold&resolve import/export url
+  // resolve import/export url
   fn fold_module_items(&mut self, module_items: Vec<ModuleItem>) -> Vec<ModuleItem> {
     let mut items = Vec::<ModuleItem>::new();
 
@@ -41,7 +31,7 @@ impl Fold for ResolveFold {
                 let resolved_url = resolver.resolve(
                   import_decl.src.value.as_ref(),
                   false,
-                  mark_span(&import_decl.src.span, self.mark_import_src_location),
+                  mark_span(&import_decl.src.span, self.mark_src_location.unwrap_or(false)),
                 );
                 ModuleItem::ModuleDecl(ModuleDecl::Import(ImportDecl {
                   src: Box::new(new_str(&resolved_url)),
@@ -72,7 +62,7 @@ impl Fold for ResolveFold {
                 let resolved_url = resolver.resolve(
                   src.value.as_ref(),
                   false,
-                  mark_span(&src.span, self.mark_import_src_location),
+                  mark_span(&src.span, self.mark_src_location.unwrap_or(false)),
                 );
                 ModuleItem::ModuleDecl(ModuleDecl::ExportNamed(NamedExport {
                   span,
@@ -89,7 +79,7 @@ impl Fold for ResolveFold {
               let resolved_url = resolver.resolve(
                 src.value.as_ref(),
                 false,
-                mark_span(&src.span, self.mark_import_src_location),
+                mark_span(&src.span, self.mark_src_location.unwrap_or(false)),
               );
               ModuleItem::ModuleDecl(ModuleDecl::ExportAll(ExportAll {
                 span,
@@ -133,7 +123,7 @@ impl Fold for ResolveFold {
           let new_src = resolver.resolve(
             src.value.as_ref(),
             true,
-            mark_span(&src.span, self.mark_import_src_location),
+            mark_span(&src.span, self.mark_src_location.unwrap_or(false)),
           );
 
           args[0] = ExprOrSpread {
@@ -165,7 +155,7 @@ impl Fold for ResolveFold {
         let new_src = resolver.resolve(
           src.value.as_ref(),
           true,
-          mark_span(&src.span, self.mark_import_src_location),
+          mark_span(&src.span, self.mark_src_location.unwrap_or(false)),
         );
 
         call.args[0] = ExprOrSpread {

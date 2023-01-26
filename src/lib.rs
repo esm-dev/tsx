@@ -2,7 +2,7 @@ mod css;
 mod error;
 mod hmr;
 mod minifier;
-mod resolve_fold;
+mod resolver_fold;
 mod resolver;
 mod swc;
 mod swc_helpers;
@@ -10,8 +10,8 @@ mod swc_helpers;
 #[cfg(test)]
 mod tests;
 
-use minifier::MinifierOptions;
 use hmr::HmrOptions;
+use minifier::MinifierOptions;
 use resolver::{DependencyDescriptor, Resolver};
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
@@ -27,7 +27,6 @@ use wasm_bindgen::prelude::{wasm_bindgen, JsValue};
 pub struct SWCOptions {
   pub lang: Option<String>,
   pub target: Option<String>,
-  pub import_map: Option<String>,
   pub is_dev: Option<bool>,
   pub hmr: Option<HmrOptions>,
   pub jsx_factory: Option<String>,
@@ -35,6 +34,7 @@ pub struct SWCOptions {
   pub jsx_import_source: Option<String>,
   pub minify: Option<MinifierOptions>,
   pub source_map: Option<bool>,
+  pub import_map: Option<String>,
   pub version_map: Option<HashMap<String, String>>,
   pub global_version: Option<String>,
 }
@@ -56,12 +56,15 @@ pub fn transform(specifier: &str, code: &str, swc_options: JsValue) -> Result<Js
   console_error_panic_hook::set_once();
 
   let options: SWCOptions = serde_wasm_bindgen::from_value(swc_options).unwrap();
-  let importmap = import_map::parse_from_json(
-    &Url::from_str("file:///").unwrap(),
-    options.import_map.unwrap_or("{}".into()).as_str(),
-  )
-  .expect("could not parse the import map")
-  .import_map;
+  let importmap = if let Some(import_map_json) = options.import_map {
+    Some(
+      import_map::parse_from_json(&Url::from_str("file:///").unwrap(), import_map_json.as_str())
+        .expect("could not parse the import map")
+        .import_map,
+    )
+  } else {
+    None
+  };
   let resolver = Rc::new(RefCell::new(Resolver::new(
     specifier,
     importmap,

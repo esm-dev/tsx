@@ -1,7 +1,7 @@
 use crate::error::{DiagnosticBuffer, ErrorBuffer};
-use crate::hmr::{hmr_fold, HmrOptions};
-use crate::minifier::{MinifierOptions, MinifierPass};
-use crate::resolve_fold::resolve_fold;
+use crate::hmr::{HmrOptions, HMR};
+use crate::minifier::{Minifier, MinifierOptions};
+use crate::resolver_fold::ResolverFolder;
 use crate::resolver::Resolver;
 
 use std::{cell::RefCell, path::Path, rc::Rc};
@@ -135,7 +135,10 @@ impl SWC {
       let passes = chain!(
         swc_ecma_transforms::resolver(unresolved_mark, top_level_mark, is_ts),
         Optional::new(react::jsx_src(is_dev, self.source_map.clone()), is_jsx),
-        resolve_fold(resolver.clone(), false),
+        ResolverFolder {
+          resolver: resolver.clone(),
+          mark_src_location: None,
+        },
         decorators::decorators(decorators::Config {
           legacy: true,
           emit_metadata: false,
@@ -248,7 +251,10 @@ impl SWC {
           is_jsx
         ),
         Optional::new(
-          hmr_fold(resolver.clone(), options.hmr.as_ref().unwrap_or(&HmrOptions::default())),
+          HMR {
+            specifier: self.specifier.clone(),
+            options: options.hmr.as_ref().unwrap_or(&HmrOptions::default()).clone(),
+          },
           is_dev && options.hmr.is_some() && !specifier_is_remote
         ),
         dce::dce(
@@ -260,7 +266,7 @@ impl SWC {
           unresolved_mark
         ),
         Optional::new(
-          as_folder(MinifierPass {
+          as_folder(Minifier {
             cm: self.source_map.clone(),
             comments: Some(self.comments.clone()),
             unresolved_mark,

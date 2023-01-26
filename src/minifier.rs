@@ -8,7 +8,7 @@ use swc_ecma_minifier::option::{MangleOptions, MinifyOptions};
 use swc_ecmascript::ast::*;
 use swc_ecmascript::visit::{noop_visit_mut_type, VisitMut};
 
-pub struct MinifierPass {
+pub struct Minifier {
   pub cm: Lrc<SourceMap>,
   pub comments: Option<SingleThreadedComments>,
   pub unresolved_mark: Mark,
@@ -32,7 +32,7 @@ impl Default for MinifierOptions {
   }
 }
 
-impl VisitMut for MinifierPass {
+impl VisitMut for Minifier {
   noop_visit_mut_type!();
 
   fn visit_mut_module(&mut self, m: &mut Module) {

@@ -3,7 +3,7 @@ use path_slash::PathBufExt;
 use pathdiff::diff_paths;
 use serde::Serialize;
 use std::collections::HashMap;
-use std::path::{ PathBuf};
+use std::path::PathBuf;
 use std::str::FromStr;
 use swc_common::Span;
 use url::Url;
@@ -34,13 +34,13 @@ pub struct Resolver {
   /// the graph versions
   pub version_map: HashMap<String, String>,
   // internal
-  import_map: ImportMap,
+  import_map: Option<ImportMap>,
 }
 
 impl Resolver {
   pub fn new(
     specifier: &str,
-    import_map: ImportMap,
+    import_map: Option<ImportMap>,
     version_map: HashMap<String, String>,
     global_version: Option<String>,
     is_dev: bool,
@@ -63,8 +63,12 @@ impl Resolver {
     } else {
       Url::from_str(&("file://".to_owned() + self.specifier.trim_start_matches('.'))).unwrap()
     };
-    let resolved_url = if let Ok(ret) = self.import_map.resolve(url, &referrer) {
-      ret.to_string()
+    let resolved_url = if let Some(import_map) = &self.import_map {
+      if let Ok(ret) = import_map.resolve(url, &referrer) {
+        ret.to_string()
+      } else {
+        url.into()
+      }
     } else {
       url.into()
     };
@@ -108,7 +112,7 @@ impl Resolver {
       }
     }
 
-    if !is_remote  {
+    if !is_remote {
       // apply graph version if exists
       let v = if self.version_map.contains_key(&fixed_url) {
         self.version_map.get(&fixed_url)

@@ -21,7 +21,7 @@ fn transform(specifer: &str, source: &str, is_dev: bool, options: &EmitOptions) 
     SWC::parse(specifer, source, swc_ecmascript::ast::EsVersion::Es2022, None).expect("could not parse module");
   let resolver = Rc::new(RefCell::new(Resolver::new(
     specifer,
-    importmap,
+    Some(importmap),
     graph_versions,
     Some("1.0.0".into()),
     is_dev,
@@ -165,9 +165,7 @@ fn jsx_automtic() {
       ..Default::default()
     },
   );
-  assert!(
-    code.contains("import { jsx as _jsx, Fragment as _Fragment } from \"https://esm.sh/react@18/jsx-runtime\"")
-  );
+  assert!(code.contains("import { jsx as _jsx, Fragment as _Fragment } from \"https://esm.sh/react@18/jsx-runtime\""));
   assert!(code.contains("_jsx(_Fragment, {"));
   assert!(code.contains("_jsx(\"h1\", {"));
   assert!(code.contains("children: \"Hello world!\""));
@@ -178,7 +176,7 @@ fn jsx_automtic() {
 }
 
 #[test]
-fn react_refresh() {
+fn hmr() {
   let source = r#"
     import { useState } from "react"
     export default function App() {
@@ -193,7 +191,7 @@ fn react_refresh() {
     source,
     true,
     &EmitOptions {
-      hmr:Some( HmrOptions {
+      hmr: Some(HmrOptions {
         runtime_js_url: "/hmr.js".to_owned(),
         react_refresh: Some(true),
       }),
@@ -201,9 +199,9 @@ fn react_refresh() {
       ..Default::default()
     },
   );
-  assert!(code.contains(
-    "import { __REACT_REFRESH_RUNTIME__, __REACT_REFRESH__ } from \"/hmr.js\""
-  ));
+  assert!(code.contains("import __CREATE_HOT_CONTEXT__ from \"/hmr.js\""));
+  assert!(code.contains("import.meta.hot = __CREATE_HOT_CONTEXT__(\"./app.tsx\")"));
+  assert!(code.contains("import { __REACT_REFRESH_RUNTIME__, __REACT_REFRESH__ } from \"/hmr.js\""));
   assert!(code.contains("const prevRefreshReg = $RefreshReg$"));
   assert!(code.contains("const prevRefreshSig = $RefreshSig$"));
   assert!(code.contains(

@@ -1,10 +1,8 @@
-use crate::resolver::Resolver;
-use crate::swc_helpers::{
+ use crate::swc_helpers::{
   import_name, is_call_expr_by_name, new_member_expr, new_str, pat_id, rename_var_decl, simple_member_expr,
   window_assign,
 };
 use serde::Deserialize;
-use std::{cell::RefCell, rc::Rc};
 use swc_common::DUMMY_SP;
 use swc_ecmascript::ast::*;
 use swc_ecmascript::utils::quote_ident;
@@ -26,35 +24,26 @@ impl Default for HmrOptions {
   }
 }
 
-pub fn hmr_fold(resolver: Rc<RefCell<Resolver>>, options: &HmrOptions) -> impl Fold {
-  HmrFold {
-    resolver,
-    runtime_js_url: options.runtime_js_url.to_owned(),
-  }
+pub struct HMR {
+  pub specifier: String,
+  pub options: HmrOptions,
 }
 
-pub struct HmrFold {
-  resolver: Rc<RefCell<Resolver>>,
-  runtime_js_url: String,
-}
-
-impl Fold for HmrFold {
+impl Fold for HMR {
   noop_fold_type!();
 
-  // resolve import/export url
   fn fold_module_items(&mut self, module_items: Vec<ModuleItem>) -> Vec<ModuleItem> {
-    let resolver = self.resolver.borrow();
-    let mut items = Vec::<ModuleItem>::new();
+     let mut items = Vec::<ModuleItem>::new();
     let mut react_refresh = false;
 
-    // import __CREATE_HOT_CONTEXT__ from "/_hmr.js"
+    // import __CREATE_HOT_CONTEXT__ from "HMR_RUNTIME_JS"
     items.push(ModuleItem::ModuleDecl(ModuleDecl::Import(ImportDecl {
       span: DUMMY_SP,
       specifiers: vec![ImportSpecifier::Default(ImportDefaultSpecifier {
         span: DUMMY_SP,
         local: quote_ident!("__CREATE_HOT_CONTEXT__"),
       })],
-      src: Box::new(new_str(&self.runtime_js_url)),
+      src: Box::new(new_str(&self.options.runtime_js_url)),
       type_only: false,
       asserts: None,
     })));
@@ -73,33 +62,35 @@ impl Fold for HmrFold {
           callee: Callee::Expr(Box::new(Expr::Ident(quote_ident!("__CREATE_HOT_CONTEXT__")))),
           args: vec![ExprOrSpread {
             spread: None,
-            expr: Box::new(Expr::Lit(Lit::Str(new_str(&resolver.specifier)))),
+            expr: Box::new(Expr::Lit(Lit::Str(new_str(&self.specifier)))),
           }],
           type_args: None,
         })),
       })),
     })));
 
-    for item in &module_items {
-      if let ModuleItem::Stmt(Stmt::Expr(ExprStmt { expr, .. })) = &item {
-        if let Expr::Call(call) = expr.as_ref() {
-          if is_call_expr_by_name(&call, "$RefreshReg$") {
-            react_refresh = true;
-            break;
+    if self.options.react_refresh.unwrap_or_default() {
+      for item in &module_items {
+        if let ModuleItem::Stmt(Stmt::Expr(ExprStmt { expr, .. })) = &item {
+          if let Expr::Call(call) = expr.as_ref() {
+            if is_call_expr_by_name(&call, "$RefreshReg$") {
+              react_refresh = true;
+              break;
+            }
           }
         }
       }
     }
 
     if react_refresh {
-      // import { __REACT_REFRESH_RUNTIME__, __REACT_REFRESH__ } from "/_hmr.js"
+      // import { __REACT_REFRESH_RUNTIME__, __REACT_REFRESH__ } from "HMR_RUNTIME_JS"
       items.push(ModuleItem::ModuleDecl(ModuleDecl::Import(ImportDecl {
         span: DUMMY_SP,
         specifiers: vec![
           import_name("__REACT_REFRESH_RUNTIME__"),
           import_name("__REACT_REFRESH__"),
         ],
-        src: Box::new(new_str(&self.runtime_js_url)),
+        src: Box::new(new_str(&self.options.runtime_js_url)),
         type_only: false,
         asserts: None,
       })));
@@ -126,7 +117,7 @@ impl Fold for HmrFold {
                 expr: Box::new(Expr::Bin(BinExpr {
                   span: DUMMY_SP,
                   op: BinaryOp::Add,
-                  left: Box::new(Expr::Lit(Lit::Str(new_str(&resolver.specifier)))),
+                  left: Box::new(Expr::Lit(Lit::Str(new_str(&self.specifier)))),
                   right: Box::new(Expr::Bin(BinExpr {
                     span: DUMMY_SP,
                     op: BinaryOp::Add,
