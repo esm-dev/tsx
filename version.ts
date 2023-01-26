@@ -25,10 +25,10 @@ export async function prepublish(version: string): Promise<boolean> {
       `lightningcss_config: LightningCSSConfig): LightningCSSTransformResult`,
     ) + addonDts,
   );
-  const wasmData = await Deno.readFile("./pkg/esm_compiler_bg.wasm");
+  const wasmStat = await Deno.stat("./pkg/esm_compiler_bg.wasm");
   console.log(
-    `wasm size: ${prettyBytes(wasmData.length)}, gzipped: ${
-      prettyBytes(await getGzSize(wasmData))
+    `wasm size: ${prettyBytes(wasmStat.size)}, gzipped: ${
+      prettyBytes(await getGzSize("./pkg/esm_compiler_bg.wasm"))
     }`,
   );
   return true;
@@ -44,19 +44,19 @@ function prettyBytes(n: number) {
   return (n / 1024 / 1024).toFixed(2) + " MB";
 }
 
-async function getGzSize(data: Uint8Array) {
-  const r = new Response(data).body?.pipeThrough(
-    new CompressionStream("gzip"),
-  ).getReader()!;
-  const chunks: Uint8Array[] = [];
+async function getGzSize(name: string) {
+  const f = await Deno.open(name);
+  const c = new CompressionStream("gzip");
+  const r = new Response(f.readable).body?.pipeThrough(c).getReader()!;
+  let size = 0;
   while (true) {
     const { done, value } = await r.read();
     if (done) {
       break;
     }
-    chunks.push(value!);
+    size += value.length;
   }
-  return chunks.reduce((a, b) => a + b.length, 0);
+  return size;
 }
 
 async function run(cmd: string[]) {
