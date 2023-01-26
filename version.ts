@@ -1,5 +1,5 @@
 /** `VERSION` managed by https://deno.land/x/publish */
-export const VERSION = "0.2.1";
+export const VERSION = "0.2.2";
 
 /** `prepublish` will be invoked before publish */
 export async function prepublish(version: string): Promise<boolean> {
@@ -25,6 +25,12 @@ export async function prepublish(version: string): Promise<boolean> {
       `lightningcss_config: LightningCSSConfig): LightningCSSTransformResult`,
     ) + addonDts,
   );
+  const wasmData = await Deno.readFile("./pkg/esm_compiler_bg.wasm");
+  console.log(
+    `wasm size: ${prettyBytes(wasmData.length)}, gzipped: ${
+      prettyBytes(await getGzSize(wasmData))
+    }`,
+  );
   return true;
 }
 
@@ -32,6 +38,25 @@ export async function prepublish(version: string): Promise<boolean> {
 export async function postpublish(version: string) {
   Deno.chdir("./pkg");
   await run(["npm", "publish"]);
+}
+
+function prettyBytes(n: number) {
+  return (n / 1024 / 1024).toFixed(2) + " MB";
+}
+
+async function getGzSize(data: Uint8Array) {
+  const r = new Response(data).body?.pipeThrough(
+    new CompressionStream("gzip"),
+  ).getReader()!;
+  const chunks: Uint8Array[] = [];
+  while (true) {
+    const { done, value } = await r.read();
+    if (done) {
+      break;
+    }
+    chunks.push(value!);
+  }
+  return chunks.reduce((a, b) => a + b.length, 0);
 }
 
 async function run(cmd: string[]) {
