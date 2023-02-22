@@ -126,7 +126,6 @@ pub fn compile<'i>(filename: String, code: &'i str, config: &Config) -> Result<T
       source_index: 0,
       error_recovery: false,
       warnings: warnings.clone(),
-      at_rule_parser: ParserOptions::default_at_rule_parser(),
     },
   )?;
   stylesheet.minify(MinifyOptions {
