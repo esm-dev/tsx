@@ -1,4 +1,4 @@
- use crate::swc_helpers::{
+use crate::swc_helpers::{
   import_name, is_call_expr_by_name, new_member_expr, new_str, pat_id, rename_var_decl, simple_member_expr,
   window_assign,
 };
@@ -33,7 +33,7 @@ impl Fold for HMR {
   noop_fold_type!();
 
   fn fold_module_items(&mut self, module_items: Vec<ModuleItem>) -> Vec<ModuleItem> {
-     let mut items = Vec::<ModuleItem>::new();
+    let mut items = Vec::<ModuleItem>::new();
     let mut react_refresh = false;
 
     // import __CREATE_HOT_CONTEXT__ from "HMR_RUNTIME_JS"
@@ -45,7 +45,7 @@ impl Fold for HMR {
       })],
       src: Box::new(new_str(&self.options.runtime_js_url)),
       type_only: false,
-      asserts: None,
+      with: None,
     })));
     // import.meta.hot = __CREATE_HOT_CONTEXT__($specifier)
     items.push(ModuleItem::Stmt(Stmt::Expr(ExprStmt {
@@ -92,7 +92,7 @@ impl Fold for HMR {
         ],
         src: Box::new(new_str(&self.options.runtime_js_url)),
         type_only: false,
-        asserts: None,
+        with: None,
       })));
       // const prevRefreshReg = $RefreshReg$
       items.push(rename_var_decl("prevRefreshReg", "$RefreshReg$"));
@@ -104,7 +104,7 @@ impl Fold for HMR {
         Expr::Arrow(ArrowExpr {
           span: DUMMY_SP,
           params: vec![pat_id("type"), pat_id("id")],
-          body: BlockStmtOrExpr::Expr(Box::new(Expr::Call(CallExpr {
+          body: Box::new(BlockStmtOrExpr::Expr(Box::new(Expr::Call(CallExpr {
             span: DUMMY_SP,
             callee: Callee::Expr(Box::new(simple_member_expr("__REACT_REFRESH_RUNTIME__", "register"))),
             args: vec![
@@ -128,7 +128,7 @@ impl Fold for HMR {
               },
             ],
             type_args: None,
-          }))),
+          })))),
           is_async: false,
           is_generator: false,
           type_params: None,
@@ -164,11 +164,11 @@ impl Fold for HMR {
           span: DUMMY_SP,
           callee: Callee::Expr(Box::new(Expr::OptChain(OptChainExpr {
             span: DUMMY_SP,
-            question_dot_token: DUMMY_SP,
-            base: OptChainBase::Member(new_member_expr(
+            optional: true,
+            base: Box::new(OptChainBase::Member(new_member_expr(
               Expr::Member(new_member_expr(simple_member_expr("import", "meta"), "hot")),
               "accept",
-            )),
+            ))),
           }))),
           args: vec![ExprOrSpread {
             spread: None,

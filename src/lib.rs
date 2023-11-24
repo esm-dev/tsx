@@ -83,7 +83,7 @@ pub fn transform(specifier: &str, code: &str, swc_options: JsValue) -> Result<Js
     "es2022" => EsVersion::Es2022,
     _ => EsVersion::Es2022, // latest version
   };
-  let module = SWC::parse(specifier, code, target, options.lang).expect("could not parse the module");
+  let module = SWC::parse(specifier, code,  options.lang).expect("could not parse the module");
   let (code, map) = module
     .transform(
       resolver.clone(),

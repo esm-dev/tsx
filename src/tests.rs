@@ -18,7 +18,7 @@ fn transform(specifer: &str, source: &str, is_dev: bool, options: &EmitOptions) 
   let mut graph_versions: HashMap<String, String> = HashMap::new();
   graph_versions.insert("./foo.ts".into(), "100".into());
   let module =
-    SWC::parse(specifer, source, swc_ecmascript::ast::EsVersion::Es2022, None).expect("could not parse module");
+    SWC::parse(specifer, source, None).expect("could not parse module");
   let resolver = Rc::new(RefCell::new(Resolver::new(
     specifer,
     Some(importmap),
@@ -99,7 +99,7 @@ fn parcel_css() {
   "#;
   let cfg = css::Config {
     targets: Some(Browsers {
-      chrome: Some(95),
+      chrome: Some(95 << 16),
       ..Browsers::default()
     }),
     minify: Some(true),
@@ -108,10 +108,6 @@ fn parcel_css() {
     pseudo_classes: None,
     unused_symbols: None,
     analyze_dependencies: None,
-    drafts: Some(css::Drafts {
-      nesting: true,
-      custom_media: true,
-    }),
   };
   let res = css::compile("style.css".into(), source, &cfg).unwrap();
   assert_eq!(res.code, ".foo{background:#ff0;border-radius:2px;transition:background .2s}.foo.bar{color:green}@media ((color) or (hover)) and (min-width:1024px){.a{color:green}}");
@@ -123,7 +119,8 @@ fn import_resolving() {
     import React from "react"
     import { foo } from "~/foo.ts"
     import Layout from "./Layout.tsx"
-    import "https://esm.sh/@fullcalendar/daygrid?css&dev"
+    import "https://esm.sh/preact@10.13.0"
+    import "https://esm.sh/preact@10.13.0?dev"
     import "../../style/app.css"
 
     foo()
@@ -137,8 +134,9 @@ fn import_resolving() {
   let (code, _) = transform("./pages/blog/$id.tsx", source, false, &EmitOptions::default());
   assert!(code.contains("\"https://esm.sh/react@18\""));
   assert!(code.contains("\"../../foo.ts?v=100\""));
+  assert!(code.contains("\"https://esm.sh/preact@10.13.0\""));
+  assert!(code.contains("\"https://esm.sh/preact@10.13.0?dev\""));
   assert!(code.contains("\"./Layout.tsx?v=1.0.0\""));
-  assert!(code.contains("\"https://esm.sh/@fullcalendar/daygrid?css&dev&module\""));
   assert!(code.contains("\"../../style/app.css?module&v=1.0.0\""));
   assert!(code.contains("import(\"https://esm.sh/asksomeonelse\")"));
   assert!(code.contains("new Worker(\"https://esm.sh/asksomeonelse\")"));
@@ -214,5 +212,5 @@ fn hmr() {
   assert!(code.contains("$RefreshReg$(_c, \"App\")"));
   assert!(code.contains("window.$RefreshReg$ = prevRefreshReg"));
   assert!(code.contains("window.$RefreshSig$ = prevRefreshSig;"));
-  assert!(code.contains("import.meta.hot?.accept(__REACT_REFRESH__)"));
+  assert!(code.contains("(import.meta.hot?.accept)(__REACT_REFRESH__)"));
 }

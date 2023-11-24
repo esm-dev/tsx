@@ -77,11 +77,12 @@ impl Resolver {
       if !self.specifier_is_remote {
         let mut buf = PathBuf::from(self.specifier.trim_start_matches('.'));
         buf.pop();
-        let mut path = diff_paths(&path, buf).unwrap().to_slash().unwrap().to_string();
+        let path = diff_paths(&path, buf).unwrap().to_slash().unwrap().to_string();
         if !path.starts_with("./") && !path.starts_with("../") {
-          path = "./".to_owned() + &path
+          "./".to_owned() + path.as_str()
+        } else {
+          path
         }
-        path
       } else {
         ".".to_owned() + path
       }

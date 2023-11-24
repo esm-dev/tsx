@@ -46,7 +46,7 @@ impl Fold for ResolverFolder {
               specifiers,
               src: Some(src),
               span,
-              asserts,
+              with,
             }) => {
               if type_only {
                 // ingore type export
@@ -55,7 +55,7 @@ impl Fold for ResolverFolder {
                   specifiers,
                   src: Some(src),
                   type_only,
-                  asserts,
+                  with,
                 }))
               } else {
                 let mut resolver = self.resolver.borrow_mut();
@@ -69,12 +69,17 @@ impl Fold for ResolverFolder {
                   specifiers,
                   src: Some(Box::new(new_str(&resolved_url))),
                   type_only,
-                  asserts,
+                  with,
                 }))
               }
             }
             // match: export * from "https://esm.sh/react"
-            ModuleDecl::ExportAll(ExportAll { src, span, asserts }) => {
+            ModuleDecl::ExportAll(ExportAll {
+              src,
+              span,
+              with,
+              type_only,
+            }) => {
               let mut resolver = self.resolver.borrow_mut();
               let resolved_url = resolver.resolve(
                 src.value.as_ref(),
@@ -84,7 +89,8 @@ impl Fold for ResolverFolder {
               ModuleItem::ModuleDecl(ModuleDecl::ExportAll(ExportAll {
                 span,
                 src: Box::new(new_str(&resolved_url)),
-                asserts,
+                with,
+                type_only,
               }))
             }
             _ => ModuleItem::ModuleDecl(decl),

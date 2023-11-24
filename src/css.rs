@@ -8,8 +8,9 @@
 use lightningcss::css_modules::CssModuleExports;
 use lightningcss::dependencies::Dependency;
 use lightningcss::error::{Error, MinifyErrorKind, ParserError, PrinterErrorKind};
-use lightningcss::stylesheet::{MinifyOptions, ParserOptions, PrinterOptions, PseudoClasses, StyleSheet};
+use lightningcss::stylesheet::{MinifyOptions, ParserFlags, ParserOptions, PrinterOptions, PseudoClasses, StyleSheet};
 use lightningcss::targets::Browsers;
+use lightningcss::targets::Targets;
 use parcel_sourcemap::SourceMap;
 use serde::{Deserialize, Serialize};
 use std::collections::HashSet;
@@ -47,7 +48,6 @@ pub struct Config {
   pub targets: Option<Browsers>,
   pub minify: Option<bool>,
   pub source_map: Option<bool>,
-  pub drafts: Option<Drafts>,
   pub css_modules: Option<CssModulesOption>,
   pub analyze_dependencies: Option<DependencyOptions>,
   pub pseudo_classes: Option<OwnedPseudoClasses>,
@@ -91,24 +91,12 @@ impl<'a> Into<PseudoClasses<'a>> for &'a OwnedPseudoClasses {
   }
 }
 
-#[derive(Serialize, Debug, Deserialize, Default)]
-#[serde(rename_all = "camelCase")]
-pub struct Drafts {
-  #[serde(default)]
-  pub nesting: bool,
-  #[serde(default)]
-  pub custom_media: bool,
-}
-
 pub fn compile<'i>(filename: String, code: &'i str, config: &Config) -> Result<TransformResult, CompileError<'i>> {
-  let drafts = config.drafts.as_ref();
   let warnings = Some(Arc::new(RwLock::new(Vec::new())));
   let mut stylesheet = StyleSheet::parse(
     &code,
     ParserOptions {
       filename: filename.clone(),
-      nesting: matches!(drafts, Some(d) if d.nesting),
-      custom_media: matches!(drafts, Some(d) if d.custom_media),
       css_modules: if let Some(css_modules) = &config.css_modules {
         match css_modules {
           CssModulesOption::Bool(true) => Some(lightningcss::css_modules::Config::default()),
@@ -126,10 +114,11 @@ pub fn compile<'i>(filename: String, code: &'i str, config: &Config) -> Result<T
       source_index: 0,
       error_recovery: false,
       warnings: warnings.clone(),
+      flags: ParserFlags::NESTING | ParserFlags::CUSTOM_MEDIA,
     },
   )?;
   stylesheet.minify(MinifyOptions {
-    targets: config.targets,
+    targets: Targets::from(config.targets.clone().unwrap_or_default()),
     unused_symbols: config.unused_symbols.clone().unwrap_or_default(),
   })?;
 
@@ -145,8 +134,8 @@ pub fn compile<'i>(filename: String, code: &'i str, config: &Config) -> Result<T
   let res = stylesheet.to_css(PrinterOptions {
     minify: config.minify.unwrap_or(false),
     source_map: source_map.as_mut(),
-    project_root:None,
-    targets: config.targets,
+    project_root: None,
+    targets: Targets::from(config.targets.clone().unwrap_or_default()),
     analyze_dependencies: if let Some(analyze_dependencies) = &config.analyze_dependencies {
       Some(lightningcss::dependencies::DependencyOptions {
         remove_imports: analyze_dependencies.remove_imports,

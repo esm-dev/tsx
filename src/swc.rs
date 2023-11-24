@@ -1,8 +1,8 @@
 use crate::error::{DiagnosticBuffer, ErrorBuffer};
 use crate::hmr::{HmrOptions, HMR};
 use crate::minifier::{Minifier, MinifierOptions};
-use crate::resolver_fold::ResolverFolder;
 use crate::resolver::Resolver;
+use crate::resolver_fold::ResolverFolder;
 
 use std::{cell::RefCell, path::Path, rc::Rc};
 use swc_common::comments::SingleThreadedComments;
@@ -11,9 +11,10 @@ use swc_common::{chain, FileName, Globals, Mark, SourceMap};
 use swc_ecma_transforms::optimization::simplify::dce;
 use swc_ecma_transforms::pass::Optional;
 use swc_ecma_transforms::proposals::decorators;
-use swc_ecma_transforms::typescript::strip;
+use swc_ecma_transforms::typescript::{typescript,tsx};
 use swc_ecma_transforms::{compat, fixer, helpers, hygiene, react, Assumptions};
 use swc_ecmascript::ast::{EsVersion, Module, Program};
+use swc_ecmascript::codegen;
 use swc_ecmascript::codegen::text_writer::JsWriter;
 use swc_ecmascript::codegen::Node;
 use swc_ecmascript::parser::lexer::Lexer;
@@ -56,7 +57,7 @@ pub struct SWC {
 
 impl SWC {
   /// parse source code.
-  pub fn parse(specifier: &str, source: &str, target: EsVersion, lang: Option<String>) -> Result<Self, anyhow::Error> {
+  pub fn parse(specifier: &str, source: &str, lang: Option<String>) -> Result<Self, anyhow::Error> {
     let source_map = SourceMap::default();
     let source_file = source_map.new_source_file(FileName::Real(Path::new(specifier).to_path_buf()), source.into());
     let sm = &source_map;
@@ -64,7 +65,7 @@ impl SWC {
     let syntax = get_syntax(specifier, lang);
     let input = StringInput::from(&*source_file);
     let comments = SingleThreadedComments::default();
-    let lexer = Lexer::new(syntax, target, input, Some(&comments));
+    let lexer = Lexer::new(syntax, EsVersion::EsNext, input, Some(&comments));
     let mut parser = swc_ecmascript::parser::Parser::new_from(lexer);
     let handler = Handler::with_emitter_and_flags(
       Box::new(error_buffer.clone()),
@@ -152,9 +153,12 @@ impl SWC {
                 private_as_properties: assumptions.private_fields_as_properties,
                 constant_super: assumptions.constant_super,
                 set_public_fields: assumptions.set_public_class_fields,
-                no_document_all: assumptions.no_document_all
+                no_document_all: assumptions.no_document_all,
+                pure_getter: assumptions.pure_getters,
+                static_blocks_mark: Mark::new(),
               }
-            }
+            },
+            unresolved_mark
           ),
           should_enable(options.target, EsVersion::Es2022)
         ),
@@ -163,15 +167,18 @@ impl SWC {
           should_enable(options.target, EsVersion::Es2021)
         ),
         Optional::new(
-          compat::es2020::es2020(compat::es2020::Config {
-            nullish_coalescing: compat::es2020::nullish_coalescing::Config {
-              no_document_all: assumptions.no_document_all
+          compat::es2020::es2020(
+            compat::es2020::Config {
+              nullish_coalescing: compat::es2020::nullish_coalescing::Config {
+                no_document_all: assumptions.no_document_all
+              },
+              optional_chaining: compat::es2020::optional_chaining::Config {
+                no_document_all: assumptions.no_document_all,
+                pure_getter: assumptions.pure_getters
+              }
             },
-            optional_chaining: compat::es2020::opt_chaining::Config {
-              no_document_all: assumptions.no_document_all,
-              pure_getter: assumptions.pure_getters
-            }
-          }),
+            unresolved_mark
+          ),
           should_enable(options.target, EsVersion::Es2020)
         ),
         Optional::new(
@@ -205,17 +212,23 @@ impl SWC {
         compat::reserved_words::reserved_words(),
         helpers::inject_helpers(top_level_mark),
         Optional::new(
-          strip::strip_with_config(strip_config_from_emit_options(), top_level_mark),
-          !is_jsx
-        ),
-        Optional::new(
-          strip::strip_with_jsx(
-            self.source_map.clone(),
-            strip_config_from_emit_options(),
-            &self.comments,
+          typescript::strip(
             top_level_mark
           ),
-          is_jsx
+          is_ts && !is_jsx
+        ),
+        Optional::new(
+          tsx(
+            self.source_map.clone(),
+            typescript::Config::default(),
+            typescript::TsxConfig {
+              pragma: react_options.pragma.clone(),
+              pragma_frag: react_options.pragma_frag.clone(),
+            },
+            Some(&self.comments),
+            top_level_mark
+          ),
+          is_ts && is_jsx
         ),
         Optional::new(
           react::refresh(
@@ -242,11 +255,11 @@ impl SWC {
             self.source_map.clone(),
             Some(&self.comments),
             react::Options {
-              use_builtins: Some(true),
               development: Some(is_dev),
               ..react_options
             },
-            top_level_mark
+            top_level_mark,
+            unresolved_mark,
           ),
           is_jsx
         ),
@@ -257,14 +270,7 @@ impl SWC {
           },
           is_dev && options.hmr.is_some() && !specifier_is_remote
         ),
-        dce::dce(
-          dce::Config {
-            module_mark: None,
-            top_level: true,
-            top_retain: vec![],
-          },
-          unresolved_mark
-        ),
+        dce::dce(Default::default(), unresolved_mark),
         Optional::new(
           as_folder(Minifier {
             cm: self.source_map.clone(),
@@ -315,12 +321,10 @@ impl SWC {
 
     {
       let writer = Box::new(JsWriter::new(self.source_map.clone(), "\n", &mut buf, src_map));
-      let mut emitter = swc_ecmascript::codegen::Emitter {
-        cfg: swc_ecmascript::codegen::Config {
-          target: options.target,
-          minify: options.minify.is_some(),
-          ..Default::default()
-        },
+      let mut emitter = codegen::Emitter {
+        cfg: codegen::Config::default()
+          .with_target(options.target)
+          .with_minify(options.minify.is_some()),
         comments: Some(&self.comments),
         cm: self.source_map.clone(),
         wr: writer,
@@ -348,9 +352,9 @@ fn get_es_config(jsx: bool) -> EsConfig {
   EsConfig {
     fn_bind: true,
     export_default_from: true,
-    import_assertions: true,
     allow_super_outside_method: true,
     allow_return_outside_function: true,
+    decorators: true,
     jsx,
     ..EsConfig::default()
   }
@@ -383,15 +387,6 @@ fn get_syntax(specifier: &str, lang: Option<String>) -> Syntax {
     "ts" | "mts" => Syntax::Typescript(get_ts_config(false)),
     "tsx" => Syntax::Typescript(get_ts_config(true)),
     _ => Syntax::Es(get_es_config(false)),
-  }
-}
-
-fn strip_config_from_emit_options() -> strip::Config {
-  strip::Config {
-    import_not_used_as_values: strip::ImportsNotUsedAsValues::Remove,
-    use_define_for_class_fields: true,
-    no_empty_export: true,
-    ..Default::default()
   }
 }
 

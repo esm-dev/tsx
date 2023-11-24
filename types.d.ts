@@ -71,8 +71,6 @@ export interface LightningCSSConfig {
   sourceMap?: boolean;
   /** The browser targets for the generated code. */
   targets?: Targets;
-  /** Whether to enable various draft syntax. */
-  drafts?: Drafts;
   /** Whether to compile this file as a CSS module. */
   cssModules?: boolean | CSSModulesConfig;
   /**
@@ -93,13 +91,6 @@ export interface LightningCSSConfig {
    * selectors but individual names (without any . or # prefixes).
    */
   unusedSymbols?: string[];
-}
-
-export interface Drafts {
-  /** Whether to enable CSS nesting. */
-  nesting?: boolean;
-  /** Whether to enable @custom-media rules. */
-  customMedia?: boolean;
 }
 
 export interface PseudoClasses {
