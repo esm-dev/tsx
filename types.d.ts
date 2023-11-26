@@ -107,7 +107,7 @@ export interface LightningCSSTransformResult {
   /** The generated source map, if enabled. */
   readonly map?: string;
   /** CSS module exports, if enabled. */
-  readonly exports?: CSSModuleExports;
+  readonly exports?: Map<string, CSSModuleExport>;
   /** `@import` and `url()` dependencies, if enabled. */
   readonly dependencies?: Dependency[];
 }
@@ -118,11 +118,6 @@ export interface CSSModulesConfig {
   /** Whether to rename dashed identifiers, e.g. custom properties. */
   dashedIdents?: boolean;
 }
-
-export type CSSModuleExports = {
-  /** Maps exported (i.e. original) names to local names. */
-  readonly [name: string]: CSSModuleExport;
-};
 
 export interface CSSModuleExport {
   /** The local (compiled) name for this export. */

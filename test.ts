@@ -1,7 +1,14 @@
-import init, { transform } from "./pkg/esm_compiler.js";
+import init, { transform, transformCSS } from "./pkg/esm_compiler.js";
 
 const wasmData = await Deno.readFile("./pkg/esm_compiler_bg.wasm");
 await init(wasmData);
+
+const ret = transformCSS("test.css", ".foo{color:red}", {
+  cssModules: true,
+});
+if (ret.exports.size !== 1) {
+  throw new Error("css modules should be enabled");
+}
 
 const result = transform(
   "index.tsx",
