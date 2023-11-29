@@ -89,21 +89,12 @@ impl Resolver {
     } else {
       resolved_url.clone()
     };
-    let mut fixed_url: String = if resolved_url.starts_with("file://") {
+    let fixed_url: String = if resolved_url.starts_with("file://") {
       ".".to_owned() + resolved_url.strip_prefix("file://").unwrap()
     } else {
       resolved_url.into()
     };
     let is_remote = is_http_url(&fixed_url);
-
-    if self.is_dev && is_esm_sh_url(&fixed_url) && !fixed_url.ends_with(".development.js") {
-      if fixed_url.contains("?") {
-        fixed_url = fixed_url + "&dev"
-      } else {
-        fixed_url = fixed_url + "?dev"
-      }
-      import_url = fixed_url.clone();
-    }
 
     if is_css_url(&import_url) {
       if import_url.contains("?") {

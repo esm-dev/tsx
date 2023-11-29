@@ -11,17 +11,17 @@ use swc_ecmascript::visit::{noop_fold_type, Fold};
 #[derive(Deserialize, Clone)]
 #[serde(rename_all = "camelCase")]
 pub struct HmrOptions {
-  pub runtime_url: String,
+  pub runtime: String,
   pub react_refresh: Option<bool>,
-  pub react_refresh_runtime_url: Option<String>,
+  pub react_refresh_runtime: Option<String>,
 }
 
 impl Default for HmrOptions {
   fn default() -> Self {
     HmrOptions {
-      runtime_url: "".to_owned(),
+      runtime: "".to_owned(),
       react_refresh: Some(false),
-      react_refresh_runtime_url: None,
+      react_refresh_runtime: None,
     }
   }
 }
@@ -38,14 +38,14 @@ impl Fold for HMR {
     let mut items = Vec::<ModuleItem>::new();
     let mut react_refresh = false;
 
-    // import __CREATE_HOT_CONTEXT__ from "HMR_RUNTIME_URL"
+    // import __CREATE_HOT_CONTEXT__ from "HMR_RUNTIME"
     items.push(ModuleItem::ModuleDecl(ModuleDecl::Import(ImportDecl {
       span: DUMMY_SP,
       specifiers: vec![ImportSpecifier::Default(ImportDefaultSpecifier {
         span: DUMMY_SP,
         local: quote_ident!("__CREATE_HOT_CONTEXT__"),
       })],
-      src: Box::new(new_str(&self.options.runtime_url)),
+      src: Box::new(new_str(&self.options.runtime)),
       type_only: false,
       with: None,
     })));
@@ -85,7 +85,7 @@ impl Fold for HMR {
     }
 
     if react_refresh {
-      // import { __REACT_REFRESH_RUNTIME__, __REACT_REFRESH__ } from "REACT_REFRESH_RUNTIME_URL"
+      // import { __REACT_REFRESH_RUNTIME__, __REACT_REFRESH__ } from "REACT_REFRESH_RUNTIME"
       items.push(ModuleItem::ModuleDecl(ModuleDecl::Import(ImportDecl {
         span: DUMMY_SP,
         specifiers: vec![
@@ -95,7 +95,7 @@ impl Fold for HMR {
         src: Box::new(new_str(
           &self
             .options
-            .react_refresh_runtime_url
+            .react_refresh_runtime
             .clone()
             .unwrap_or("react-refresh/runtime".into()),
         )),
@@ -106,37 +106,43 @@ impl Fold for HMR {
       items.push(rename_var_decl("prevRefreshReg", "$RefreshReg$"));
       // const prevRefreshSig = $RefreshSig$
       items.push(rename_var_decl("prevRefreshSig", "$RefreshSig$"));
-      // window.$RefreshReg$ = (type, id) => __REACT_REFRESH_RUNTIME__.register(type, $specifier + "#" + id);
+      // window.$RefreshReg$ = (type, id) => { __REACT_REFRESH_RUNTIME__.register(type, $specifier + " " + id) };
       items.push(window_assign(
         "$RefreshReg$",
         Expr::Arrow(ArrowExpr {
           span: DUMMY_SP,
           params: vec![pat_id("type"), pat_id("id")],
-          body: Box::new(BlockStmtOrExpr::Expr(Box::new(Expr::Call(CallExpr {
+          body: Box::new(BlockStmtOrExpr::BlockStmt(BlockStmt {
             span: DUMMY_SP,
-            callee: Callee::Expr(Box::new(simple_member_expr("__REACT_REFRESH_RUNTIME__", "register"))),
-            args: vec![
-              ExprOrSpread {
-                spread: None,
-                expr: Box::new(Expr::Ident(quote_ident!("type"))),
-              },
-              ExprOrSpread {
-                spread: None,
-                expr: Box::new(Expr::Bin(BinExpr {
-                  span: DUMMY_SP,
-                  op: BinaryOp::Add,
-                  left: Box::new(Expr::Lit(Lit::Str(new_str(&self.specifier)))),
-                  right: Box::new(Expr::Bin(BinExpr {
-                    span: DUMMY_SP,
-                    op: BinaryOp::Add,
-                    left: Box::new(Expr::Lit(Lit::Str(new_str("#")))),
-                    right: Box::new(Expr::Ident(quote_ident!("id"))),
-                  })),
-                })),
-              },
-            ],
-            type_args: None,
-          })))),
+            stmts: vec![Stmt::Expr(ExprStmt {
+              span: DUMMY_SP,
+              expr: Box::new(Expr::Call(CallExpr {
+                span: DUMMY_SP,
+                callee: Callee::Expr(Box::new(simple_member_expr("__REACT_REFRESH_RUNTIME__", "register"))),
+                args: vec![
+                  ExprOrSpread {
+                    spread: None,
+                    expr: Box::new(Expr::Ident(quote_ident!("type"))),
+                  },
+                  ExprOrSpread {
+                    spread: None,
+                    expr: Box::new(Expr::Bin(BinExpr {
+                      span: DUMMY_SP,
+                      op: BinaryOp::Add,
+                      left: Box::new(Expr::Bin(BinExpr {
+                        span: DUMMY_SP,
+                        op: BinaryOp::Add,
+                        left: Box::new(Expr::Lit(Lit::Str(new_str(&self.specifier)))),
+                        right: Box::new(Expr::Lit(Lit::Str(new_str(" ")))),
+                      })),
+                      right: Box::new(Expr::Ident(quote_ident!("id"))),
+                    })),
+                  },
+                ],
+                type_args: None,
+              })),
+            })],
+          })),
           is_async: false,
           is_generator: false,
           type_params: None,
@@ -170,14 +176,10 @@ impl Fold for HMR {
         span: DUMMY_SP,
         expr: Box::new(Expr::Call(CallExpr {
           span: DUMMY_SP,
-          callee: Callee::Expr(Box::new(Expr::OptChain(OptChainExpr {
-            span: DUMMY_SP,
-            optional: true,
-            base: Box::new(OptChainBase::Member(new_member_expr(
-              Expr::Member(new_member_expr(simple_member_expr("import", "meta"), "hot")),
-              "accept",
-            ))),
-          }))),
+          callee: Callee::Expr(Box::new(Expr::Member(new_member_expr(
+            Expr::Member(new_member_expr(simple_member_expr("import", "meta"), "hot")),
+            "accept",
+          )))),
           args: vec![ExprOrSpread {
             spread: None,
             expr: Box::new(Expr::Ident(quote_ident!("__REACT_REFRESH__"))),

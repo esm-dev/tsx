@@ -17,8 +17,7 @@ fn transform(specifer: &str, source: &str, is_dev: bool, options: &EmitOptions) 
   .import_map;
   let mut graph_versions: HashMap<String, String> = HashMap::new();
   graph_versions.insert("./foo.ts".into(), "100".into());
-  let module =
-    SWC::parse(specifer, source, None).expect("could not parse module");
+  let module = SWC::parse(specifer, source, None).expect("could not parse module");
   let resolver = Rc::new(RefCell::new(Resolver::new(
     specifer,
     Some(importmap),
@@ -190,9 +189,9 @@ fn hmr() {
     true,
     &EmitOptions {
       hmr: Some(HmrOptions {
-        runtime_url: "/hmr.js".to_owned(),
+        runtime: "/hmr.js".to_owned(),
         react_refresh: Some(true),
-        react_refresh_runtime_url: Some("react-refresh/runtime".to_owned()),
+        react_refresh_runtime: Some("react-refresh/runtime".to_owned()),
       }),
       jsx_import_source: Some("https://esm.sh/react@18".to_owned()),
       ..Default::default()
@@ -203,9 +202,8 @@ fn hmr() {
   assert!(code.contains("import { __REACT_REFRESH_RUNTIME__, __REACT_REFRESH__ } from \"react-refresh/runtime\""));
   assert!(code.contains("const prevRefreshReg = $RefreshReg$"));
   assert!(code.contains("const prevRefreshSig = $RefreshSig$"));
-  assert!(code.contains(
-    "window.$RefreshReg$ = (type, id)=>__REACT_REFRESH_RUNTIME__.register(type, \"./app.tsx\" + (\"#\" + id))"
-  ));
+  assert!(code.contains("window.$RefreshReg$ = (type, id)=>{"));
+  assert!(code.contains("__REACT_REFRESH_RUNTIME__.register(type, \"./app.tsx\" + \" \" + id);"));
   assert!(code.contains("window.$RefreshSig$ = __REACT_REFRESH_RUNTIME__.createSignatureFunctionForTransform"));
   assert!(code.contains("var _s = $RefreshSig$()"));
   assert!(code.contains("_s()"));
@@ -213,5 +211,5 @@ fn hmr() {
   assert!(code.contains("$RefreshReg$(_c, \"App\")"));
   assert!(code.contains("window.$RefreshReg$ = prevRefreshReg"));
   assert!(code.contains("window.$RefreshSig$ = prevRefreshSig;"));
-  assert!(code.contains("(import.meta.hot?.accept)(__REACT_REFRESH__)"));
+  assert!(code.contains("import.meta.hot.accept(__REACT_REFRESH__)"));
 }

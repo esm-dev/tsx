@@ -1,9 +1,8 @@
 /*
-  [parcel css] - A CSS parser, transformer, and minifier written in Rust.
-  https://github.com/parcel-bundler/parcel-css
-  MPL-2.0 License
-  ! below code was copied from https://github.com/parcel-bundler/parcel-css/blob/510df4e2d825927115427b690d6706da395d2170/node/src/lib.rs, and removed node napi code
-*/
+ * lightningcss - An extremely fast CSS parser, transformer, bundler, and minifier written in Rust.
+ * @link https://github.com/parcel-bundler/lightningcss
+ * @license MPL-2.0
+ */
 
 use lightningcss::css_modules::CssModuleExports;
 use lightningcss::dependencies::Dependency;
