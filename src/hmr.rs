@@ -106,43 +106,37 @@ impl Fold for HMR {
       items.push(rename_var_decl("prevRefreshReg", "$RefreshReg$"));
       // const prevRefreshSig = $RefreshSig$
       items.push(rename_var_decl("prevRefreshSig", "$RefreshSig$"));
-      // window.$RefreshReg$ = (type, id) => { __REACT_REFRESH_RUNTIME__.register(type, $specifier + " " + id) };
+      // window.$RefreshReg$ = (type, id) => __REACT_REFRESH_RUNTIME__.register(type, $specifier + " " + id);
       items.push(window_assign(
         "$RefreshReg$",
         Expr::Arrow(ArrowExpr {
           span: DUMMY_SP,
           params: vec![pat_id("type"), pat_id("id")],
-          body: Box::new(BlockStmtOrExpr::BlockStmt(BlockStmt {
+          body: Box::new(BlockStmtOrExpr::Expr( Box::new(Expr::Call(CallExpr {
             span: DUMMY_SP,
-            stmts: vec![Stmt::Expr(ExprStmt {
-              span: DUMMY_SP,
-              expr: Box::new(Expr::Call(CallExpr {
-                span: DUMMY_SP,
-                callee: Callee::Expr(Box::new(simple_member_expr("__REACT_REFRESH_RUNTIME__", "register"))),
-                args: vec![
-                  ExprOrSpread {
-                    spread: None,
-                    expr: Box::new(Expr::Ident(quote_ident!("type"))),
-                  },
-                  ExprOrSpread {
-                    spread: None,
-                    expr: Box::new(Expr::Bin(BinExpr {
-                      span: DUMMY_SP,
-                      op: BinaryOp::Add,
-                      left: Box::new(Expr::Bin(BinExpr {
-                        span: DUMMY_SP,
-                        op: BinaryOp::Add,
-                        left: Box::new(Expr::Lit(Lit::Str(new_str(&self.specifier)))),
-                        right: Box::new(Expr::Lit(Lit::Str(new_str(" ")))),
-                      })),
-                      right: Box::new(Expr::Ident(quote_ident!("id"))),
-                    })),
-                  },
-                ],
-                type_args: None,
-              })),
-            })],
-          })),
+            callee: Callee::Expr(Box::new(simple_member_expr("__REACT_REFRESH_RUNTIME__", "register"))),
+            args: vec![
+              ExprOrSpread {
+                spread: None,
+                expr: Box::new(Expr::Ident(quote_ident!("type"))),
+              },
+              ExprOrSpread {
+                spread: None,
+                expr: Box::new(Expr::Bin(BinExpr {
+                  span: DUMMY_SP,
+                  op: BinaryOp::Add,
+                  left: Box::new(Expr::Bin(BinExpr {
+                    span: DUMMY_SP,
+                    op: BinaryOp::Add,
+                    left: Box::new(Expr::Lit(Lit::Str(new_str(&self.specifier)))),
+                    right: Box::new(Expr::Lit(Lit::Str(new_str(" ")))),
+                  })),
+                  right: Box::new(Expr::Ident(quote_ident!("id"))),
+                })),
+              },
+            ],
+            type_args: None,
+          })))),
           is_async: false,
           is_generator: false,
           type_params: None,
