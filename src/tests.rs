@@ -190,8 +190,9 @@ fn hmr() {
     true,
     &EmitOptions {
       hmr: Some(HmrOptions {
-        runtime_js_url: "/hmr.js".to_owned(),
+        runtime_url: "/hmr.js".to_owned(),
         react_refresh: Some(true),
+        react_refresh_runtime_url: Some("react-refresh/runtime".to_owned()),
       }),
       jsx_import_source: Some("https://esm.sh/react@18".to_owned()),
       ..Default::default()
@@ -199,7 +200,7 @@ fn hmr() {
   );
   assert!(code.contains("import __CREATE_HOT_CONTEXT__ from \"/hmr.js\""));
   assert!(code.contains("import.meta.hot = __CREATE_HOT_CONTEXT__(\"./app.tsx\")"));
-  assert!(code.contains("import { __REACT_REFRESH_RUNTIME__, __REACT_REFRESH__ } from \"/hmr.js\""));
+  assert!(code.contains("import { __REACT_REFRESH_RUNTIME__, __REACT_REFRESH__ } from \"react-refresh/runtime\""));
   assert!(code.contains("const prevRefreshReg = $RefreshReg$"));
   assert!(code.contains("const prevRefreshSig = $RefreshSig$"));
   assert!(code.contains(

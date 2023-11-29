@@ -1,8 +1,9 @@
 /* for swc */
 
 export type HmrOptions = {
-  runtimeJsUrl: string;
+  runtimeUrl: string;
   reactRefresh?: boolean;
+  reactRefreshRuntimeUrl?: string;
 };
 
 export type MinifierOptions = {

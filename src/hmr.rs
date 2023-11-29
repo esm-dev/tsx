@@ -11,15 +11,17 @@ use swc_ecmascript::visit::{noop_fold_type, Fold};
 #[derive(Deserialize, Clone)]
 #[serde(rename_all = "camelCase")]
 pub struct HmrOptions {
-  pub runtime_js_url: String,
+  pub runtime_url: String,
   pub react_refresh: Option<bool>,
+  pub react_refresh_runtime_url: Option<String>,
 }
 
 impl Default for HmrOptions {
   fn default() -> Self {
     HmrOptions {
-      runtime_js_url: "".to_owned(),
+      runtime_url: "".to_owned(),
       react_refresh: Some(false),
+      react_refresh_runtime_url: None,
     }
   }
 }
@@ -36,14 +38,14 @@ impl Fold for HMR {
     let mut items = Vec::<ModuleItem>::new();
     let mut react_refresh = false;
 
-    // import __CREATE_HOT_CONTEXT__ from "HMR_RUNTIME_JS"
+    // import __CREATE_HOT_CONTEXT__ from "HMR_RUNTIME_URL"
     items.push(ModuleItem::ModuleDecl(ModuleDecl::Import(ImportDecl {
       span: DUMMY_SP,
       specifiers: vec![ImportSpecifier::Default(ImportDefaultSpecifier {
         span: DUMMY_SP,
         local: quote_ident!("__CREATE_HOT_CONTEXT__"),
       })],
-      src: Box::new(new_str(&self.options.runtime_js_url)),
+      src: Box::new(new_str(&self.options.runtime_url)),
       type_only: false,
       with: None,
     })));
@@ -83,14 +85,20 @@ impl Fold for HMR {
     }
 
     if react_refresh {
-      // import { __REACT_REFRESH_RUNTIME__, __REACT_REFRESH__ } from "HMR_RUNTIME_JS"
+      // import { __REACT_REFRESH_RUNTIME__, __REACT_REFRESH__ } from "REACT_REFRESH_RUNTIME_URL"
       items.push(ModuleItem::ModuleDecl(ModuleDecl::Import(ImportDecl {
         span: DUMMY_SP,
         specifiers: vec![
           import_name("__REACT_REFRESH_RUNTIME__"),
           import_name("__REACT_REFRESH__"),
         ],
-        src: Box::new(new_str(&self.options.runtime_js_url)),
+        src: Box::new(new_str(
+          &self
+            .options
+            .react_refresh_runtime_url
+            .clone()
+            .unwrap_or("react-refresh/runtime".into()),
+        )),
         type_only: false,
         with: None,
       })));
