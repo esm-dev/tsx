@@ -35,7 +35,7 @@ const ret = await transform("./App.tsx", code, {
   isDev: true
 })
 
-console.log(ret.code, ret.map)
+console.log(ret)
 ```
 
 ## Development Setup

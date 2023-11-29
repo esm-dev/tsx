@@ -1,5 +1,7 @@
+import { test } from "./test.ts";
+
 /** `VERSION` managed by https://deno.land/x/publish */
-export const VERSION = "0.3.3";
+export const VERSION = "0.3.4";
 
 /** `prepublish` will be invoked before publish */
 export async function prepublish(version: string): Promise<boolean> {
@@ -9,10 +11,11 @@ export async function prepublish(version: string): Promise<boolean> {
     "./Cargo.toml",
     toml.replace(/version = "[\d\.]+"/, `version = "${version}"`),
   );
-  const ok = await run(["wasm-pack", "build", "--target", "web"]);
+  const ok = await run("wasm-pack", "build", "--target", "web");
   if (!ok) {
     return false;
   }
+  await test();
   const addonDts = await Deno.readTextFile("./types.d.ts");
   const dts = await Deno.readTextFile("./pkg/esm_compiler.d.ts");
   await Deno.writeTextFile(
@@ -37,7 +40,7 @@ export async function prepublish(version: string): Promise<boolean> {
 /** `postpublish` will be invoked after published */
 export async function postpublish(version: string) {
   Deno.chdir("./pkg");
-  await run(["npm", "publish"]);
+  await run("npm", "publish");
 }
 
 function prettyBytes(n: number) {
@@ -59,13 +62,11 @@ async function getGzSize(name: string) {
   return size;
 }
 
-async function run(cmd: string[]) {
-  const p = Deno.run({
-    cmd,
+async function run(cmd: string, ...args: string[]) {
+  const c = new Deno.Command(cmd, {
+    args,
     stdout: "inherit",
     stderr: "inherit",
   });
-  const status = await p.status();
-  p.close();
-  return status.success;
+  return await c.spawn().status;
 }
