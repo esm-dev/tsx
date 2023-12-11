@@ -53,9 +53,7 @@ pub struct SWCTransformOutput {
 
 #[wasm_bindgen(js_name = "transform")]
 pub fn transform(specifier: &str, code: &str, swc_options: JsValue) -> Result<JsValue, JsValue> {
-  console_error_panic_hook::set_once();
-
-  let options: SWCOptions = serde_wasm_bindgen::from_value(swc_options).unwrap();
+   let options: SWCOptions = serde_wasm_bindgen::from_value(swc_options).unwrap();
   let importmap = if let Some(import_map_json) = options.import_map {
     Some(
       import_map::parse_from_json(&Url::from_str("file:///").unwrap(), import_map_json.as_str())

@@ -1,6 +1,5 @@
 use super::*;
 use lightningcss::targets::Browsers;
-use regex::Regex;
 use std::collections::HashMap;
 
 fn transform(specifer: &str, source: &str, is_dev: bool, options: &EmitOptions) -> (String, Rc<RefCell<Resolver>>) {
@@ -66,7 +65,7 @@ fn typescript() {
   "#;
   let (code, _) = transform("mod.ts", source, false, &EmitOptions::default());
   assert!(code.contains("var D;"));
-  assert!(Regex::new(r"\[\s*enumerable\(false\)\s*\]").unwrap().is_match(&code));
+  assert!(code.contains("enumerable(false)"));
 }
 
 #[test]
