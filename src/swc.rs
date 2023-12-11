@@ -292,7 +292,7 @@ impl SWC {
       let resolver = resolver.borrow();
       for dep in &resolver.deps {
         if dep.specifier.ends_with("/jsx-runtime") || dep.specifier.ends_with("/jsx-dev-runtime") {
-          jsx_runtime = Some((dep.specifier.clone(), dep.import_url.clone()));
+          jsx_runtime = Some((dep.specifier.clone(), dep.resolved_url.clone()));
           break;
         }
       }

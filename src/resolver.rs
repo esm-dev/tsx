@@ -12,7 +12,7 @@ use url::Url;
 #[serde(rename_all = "camelCase")]
 pub struct DependencyDescriptor {
   pub specifier: String,
-  pub import_url: String,
+  pub resolved_url: String,
   #[serde(skip_serializing_if = "Option::is_none")]
   pub loc: Option<Span>,
   #[serde(skip_serializing_if = "is_false")]
@@ -57,20 +57,20 @@ impl Resolver {
   }
 
   /// Resolve import/export URLs.
-  pub fn resolve(&mut self, url: &str, dynamic: bool, loc: Option<Span>) -> String {
+  pub fn resolve(&mut self, specifier: &str, dynamic: bool, loc: Option<Span>) -> String {
     let referrer = if self.specifier_is_remote {
       Url::from_str(self.specifier.as_str()).unwrap()
     } else {
       Url::from_str(&("file://".to_owned() + self.specifier.trim_start_matches('.'))).unwrap()
     };
     let resolved_url = if let Some(import_map) = &self.import_map {
-      if let Ok(ret) = import_map.resolve(url, &referrer) {
+      if let Ok(ret) = import_map.resolve(specifier, &referrer) {
         ret.to_string()
       } else {
-        url.into()
+        specifier.into()
       }
     } else {
-      url.into()
+      specifier.into()
     };
     let mut import_url = if resolved_url.starts_with("file://") {
       let path = resolved_url.strip_prefix("file://").unwrap();
@@ -123,7 +123,7 @@ impl Resolver {
     // update dep graph
     self.deps.push(DependencyDescriptor {
       specifier: fixed_url.clone(),
-      import_url: import_url.clone(),
+      resolved_url: import_url.clone(),
       loc,
       dynamic,
     });

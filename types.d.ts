@@ -42,8 +42,8 @@ export type SWCTransformResult = {
 
 export type DependencyDescriptor = {
   readonly specifier: string;
-  readonly importUrl: string;
-  readonly loc?: { start: number; end: number; ctxt: number };
+  readonly resolvedUrl: string;
+  readonly loc?: { start: number; end: number };
   readonly dynamic?: boolean;
 };
 
