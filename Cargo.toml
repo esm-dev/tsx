@@ -11,7 +11,7 @@ edition = "2021"
 crate-type = ["cdylib", "rlib"]
 
 [dependencies]
-anyhow = "1.0.75"
+anyhow = "1.0.77"
 import_map = "0.18.0"
 path-slash = "0.2.1"
 pathdiff = "0.2.1"
@@ -29,9 +29,9 @@ parcel_sourcemap = "2.1.1"
 # crate: https://crates.io/search?q=swc_ecmascript
 swc_atoms = "0.6.5"
 swc_common = { version = "0.33.12", features = ["sourcemap"] }
-swc_ecmascript = { version = "0.236.91", features = ["codegen", "parser", "utils", "visit"] }
-swc_ecma_transforms = { version = "0.226.72", features = ["proposal", "typescript", "react", "compat", "optimization" ] }
-swc_ecma_minifier = "0.189.84"
+swc_ecmascript = { version = "0.237.5", features = ["codegen", "parser", "utils", "visit"] }
+swc_ecma_transforms = { version = "0.227.5", features = ["proposal", "typescript", "react", "compat", "optimization" ] }
+swc_ecma_minifier = "0.190.5"
 
 # wasm-bindgen
 # docs: https://rustwasm.github.io/docs/wasm-bindgen
