@@ -11,7 +11,7 @@ use swc_common::{chain, FileName, Globals, Mark, SourceMap};
 use swc_ecma_transforms::optimization::simplify::dce;
 use swc_ecma_transforms::pass::Optional;
 use swc_ecma_transforms::proposals::decorators;
-use swc_ecma_transforms::typescript::{typescript,tsx};
+use swc_ecma_transforms::typescript::{tsx, typescript};
 use swc_ecma_transforms::{compat, fixer, helpers, hygiene, react, Assumptions};
 use swc_ecmascript::ast::{EsVersion, Module, Program};
 use swc_ecmascript::codegen;
@@ -211,12 +211,7 @@ impl SWC {
         Optional::new(compat::es2016(), should_enable(options.target, EsVersion::Es2016)),
         compat::reserved_words::reserved_words(),
         helpers::inject_helpers(top_level_mark),
-        Optional::new(
-          typescript::strip(
-            top_level_mark
-          ),
-          is_ts && !is_jsx
-        ),
+        Optional::new(typescript::strip(top_level_mark), is_ts && !is_jsx),
         Optional::new(
           tsx(
             self.source_map.clone(),
@@ -270,7 +265,7 @@ impl SWC {
           },
           is_dev && options.hmr.is_some() && !specifier_is_remote
         ),
-        dce::dce(Default::default(), unresolved_mark),
+        Optional::new(dce::dce(Default::default(), unresolved_mark), options.minify.is_some()),
         Optional::new(
           as_folder(Minifier {
             cm: self.source_map.clone(),
@@ -281,7 +276,11 @@ impl SWC {
           }),
           options.minify.is_some()
         ),
-        hygiene(),
+        hygiene::hygiene_with_config(hygiene::Config {
+          keep_class_names: true,
+          top_level_mark,
+          ..Default::default()
+        }),
         fixer(Some(&self.comments)),
       );
 
