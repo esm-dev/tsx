@@ -1,0 +1,76 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>esm-compiler at edge</title>
+</head>
+
+<body>
+  <h1>esm-compiler at edge</h1>
+  <p>Compiles javascript modules at edge(earth).</p>
+
+  <form action="/" method="post">
+    <p>
+      <label>
+        Input: <br>
+        <input type="file" name="file" accept=".js,.jsx,.ts,.tsx,.css" required>
+      </label>
+    </p>
+    <p>
+      <label>
+        Options: <br>
+        <textarea name="options" cols="60" rows="8" style="font-family: monospace;">{}</textarea>
+      </label>
+    </p>
+    <p><button type="submit">Compile</button></p>
+  </form>
+
+  <section>
+    <h2 id="resulttitle" style="display:none">Result</h2>
+    <p id="loading" style="display:none">Loading...</p>
+    <pre><code id="result"></code></pre>
+    <code id="error" style="color:red"></code>
+  </section>
+
+  <script>
+    document.querySelector('form').addEventListener('submit', (e) => {
+      e.preventDefault();
+      const fd = new FormData(e.target);
+      const file = fd.get('file');
+      if (!file) {
+        return;
+      }
+      loading.style.display = 'block';
+      resulttitle.style.display = 'none';
+      file.text().then((source) => {
+        const filename = file.name;
+        fetch('/', {
+          method: 'POST',
+          body: JSON.stringify({
+            ...JSON.parse(fd.get('options')),
+            filename,
+            source
+          })
+        }).then((res) => {
+          if (!res.ok) {
+            return Promise.reject(new Error(res.statusText));
+          }
+          return res.json();
+        }).then((ret) => {
+          result.textContent = JSON.stringify(ret, null, 2);
+          error.textContent = '';
+        }).catch((err) => {
+          result.textContent = '';
+          error.textContent = 'Error: ' + err.message;
+        }).finally(() => {
+          loading.style.display = 'none';
+          resulttitle.style.display = 'block';
+        });
+      });
+    });
+  </script>
+</body>
+
+</html>

@@ -1,10 +1,16 @@
 import { initSync, transform, transformCSS } from "./pkg/esm_compiler.js";
 import wasm from "./pkg/esm_compiler_bg.wasm";
+import indexHtml from "./index.html";
 
 initSync(wasm);
 
 export default {
   async fetch(req, env) {
+    if (req.method === "GET") {
+      return new Response(indexHtml, {
+        headers: { "content-type": "text/html" },
+      });
+    }
     try {
       const { filename, source, ...opts } = await req.json();
       if (!filename || !source) {
