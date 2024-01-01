@@ -4,7 +4,7 @@ export const test = async () => {
   const wasmData = await Deno.readFile("./pkg/esm_compiler_bg.wasm");
   await init(wasmData);
 
-  const ret = transformCSS("test.css", ".foo{color:red;&.bar{color:green}}", {
+  const ret = transformCSS("test.css", ".foo { color: red; &.bar { color: green } }", {
     cssModules: true,
     targets: {
       chrome: 95 << 16,
@@ -26,8 +26,12 @@ export const test = async () => {
       `renderToString(<p>{msg}</p>)`,
     ].join("\n"),
     {
-      importMap:
-        `{ "imports": { "react": "https://esm.sh/react@18", "react-dom/": "https://esm.sh/react-dom@18/" } }`,
+      importMap: JSON.stringify({
+        "imports": {
+          "react": "https://esm.sh/react@18",
+          "react-dom/": "https://esm.sh/react-dom@18/",
+        },
+      }),
     },
   );
   if (!result.code.includes(`import React from "https://esm.sh/react@18"`)) {
@@ -46,6 +50,7 @@ export const test = async () => {
   if (result.deps?.length !== 2) {
     throw new Error("deps length should be 2");
   }
+
   console.log("%c✔ test passed", "color: green;");
 };
 

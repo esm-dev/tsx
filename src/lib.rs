@@ -52,7 +52,7 @@ pub struct SWCTransformOutput {
 }
 
 #[wasm_bindgen(js_name = "transform")]
-pub fn transform(specifier: &str, code: &str, swc_options: JsValue) -> Result<JsValue, JsValue> {
+pub fn transform(specifier: &str, source: &str, swc_options: JsValue) -> Result<JsValue, JsValue> {
    let options: SWCOptions = serde_wasm_bindgen::from_value(swc_options).unwrap();
   let importmap = if let Some(import_map_json) = options.import_map {
     Some(
@@ -81,7 +81,7 @@ pub fn transform(specifier: &str, code: &str, swc_options: JsValue) -> Result<Js
     "es2022" => EsVersion::Es2022,
     _ => EsVersion::Es2022, // latest version
   };
-  let module = SWC::parse(specifier, code,  options.lang).expect("could not parse the module");
+  let module = SWC::parse(specifier, source,  options.lang).expect("could not parse the module");
   let (code, map) = module
     .transform(
       resolver.clone(),
@@ -109,8 +109,8 @@ pub fn transform(specifier: &str, code: &str, swc_options: JsValue) -> Result<Js
 }
 
 #[wasm_bindgen(js_name = "transformCSS")]
-pub fn transform_css(filename: &str, code: &str, lightningcss_config: JsValue) -> Result<JsValue, JsValue> {
+pub fn transform_css(filename: &str, source: &str, lightningcss_config: JsValue) -> Result<JsValue, JsValue> {
   let css_config: css::Config = serde_wasm_bindgen::from_value(lightningcss_config).unwrap();
-  let res = css::compile(filename.into(), code, &css_config)?;
+  let res = css::compile(filename.into(), source, &css_config)?;
   Ok(serde_wasm_bindgen::to_value(&res).unwrap())
 }
