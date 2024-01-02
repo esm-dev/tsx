@@ -4,7 +4,7 @@ use std::collections::HashMap;
 
 fn transform(specifer: &str, source: &str, is_dev: bool, options: &EmitOptions) -> (String, Rc<RefCell<Resolver>>) {
   let importmap = import_map::parse_from_json(
-    &Url::from_str("file:///").unwrap(),
+    &Url::from_str("file:///import_map.json").unwrap(),
     r#"{
       "imports": {
         "~/": "./",
@@ -143,7 +143,6 @@ fn import_resolving() {
 #[test]
 fn jsx_automtic() {
   let source = r#"
-    /** @jsxImportSource https://esm.sh/react@18 */
     export default function App() {
       return (
         <>
@@ -201,7 +200,9 @@ fn hmr() {
   assert!(code.contains("import { __REACT_REFRESH_RUNTIME__, __REACT_REFRESH__ } from \"react-refresh/runtime\""));
   assert!(code.contains("const prevRefreshReg = $RefreshReg$"));
   assert!(code.contains("const prevRefreshSig = $RefreshSig$"));
-  assert!(code.contains("window.$RefreshReg$ = (type, id)=>__REACT_REFRESH_RUNTIME__.register(type, \"./app.tsx\" + \" \" + id);"));
+  assert!(code.contains(
+    "window.$RefreshReg$ = (type, id)=>__REACT_REFRESH_RUNTIME__.register(type, \"./app.tsx\" + \" \" + id);"
+  ));
   assert!(code.contains("window.$RefreshSig$ = __REACT_REFRESH_RUNTIME__.createSignatureFunctionForTransform"));
   assert!(code.contains("var _s = $RefreshSig$()"));
   assert!(code.contains("_s()"));

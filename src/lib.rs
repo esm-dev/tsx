@@ -2,8 +2,8 @@ mod css;
 mod error;
 mod hmr;
 mod minifier;
-mod resolver_fold;
 mod resolver;
+mod resolver_fold;
 mod swc;
 mod swc_helpers;
 
@@ -12,7 +12,7 @@ mod tests;
 
 use hmr::HmrOptions;
 use minifier::MinifierOptions;
-use resolver::{DependencyDescriptor, Resolver};
+use resolver::{is_http_url, DependencyDescriptor, Resolver};
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 use std::str::FromStr;
@@ -53,19 +53,22 @@ pub struct SWCTransformOutput {
 
 #[wasm_bindgen(js_name = "transform")]
 pub fn transform(specifier: &str, source: &str, swc_options: JsValue) -> Result<JsValue, JsValue> {
-   let options: SWCOptions = serde_wasm_bindgen::from_value(swc_options).unwrap();
+  let options: SWCOptions = serde_wasm_bindgen::from_value(swc_options).unwrap();
   let importmap = if let Some(import_map_json) = options.import_map {
     Some(
-      import_map::parse_from_json(&Url::from_str("file:///").unwrap(), import_map_json.as_str())
-        .expect("could not parse the import map")
-        .import_map,
+      import_map::parse_from_json(
+        &Url::from_str("file:///import_map.json").unwrap(),
+        import_map_json.as_str(),
+      )
+      .expect("could not parse the import map")
+      .import_map,
     )
   } else {
     None
   };
   let resolver = Rc::new(RefCell::new(Resolver::new(
     specifier,
-    importmap,
+    importmap.to_owned(),
     options.version_map.unwrap_or_default(),
     options.global_version,
     options.is_dev.unwrap_or_default(),
@@ -81,20 +84,38 @@ pub fn transform(specifier: &str, source: &str, swc_options: JsValue) -> Result<
     "es2022" => EsVersion::Es2022,
     _ => EsVersion::Es2022, // latest version
   };
-  let module = SWC::parse(specifier, source,  options.lang).expect("could not parse the module");
+  let module = SWC::parse(specifier, source, options.lang).expect("could not parse the module");
+  let jsx_import_source = if let Some(jsx_import_source) = options.jsx_import_source {
+    Some(jsx_import_source)
+  } else if let Some(importmap) = importmap {
+    if options.jsx_factory.is_none() && options.jsx_fragment_factory.is_none() {
+      let referrer = if is_http_url(specifier) {
+        Url::from_str(specifier).unwrap()
+      } else {
+        Url::from_str(&("file://".to_owned() + specifier.trim_start_matches('.'))).unwrap()
+      };
+      if let Ok(resolved) = importmap.resolve("@jsxImportSource", &referrer) {
+        Some(resolved.to_string())
+      } else {
+        None
+      }
+    } else {
+      None
+    }
+  } else {
+    None
+  };
+  let emit_options = EmitOptions {
+    target,
+    jsx_pragma: options.jsx_factory,
+    jsx_pragma_frag: options.jsx_fragment_factory,
+    jsx_import_source,
+    minify: options.minify,
+    hmr: options.hmr,
+    source_map: options.source_map.unwrap_or_default(),
+  };
   let (code, map) = module
-    .transform(
-      resolver.clone(),
-      &EmitOptions {
-        target,
-        jsx_pragma: options.jsx_factory,
-        jsx_pragma_frag: options.jsx_fragment_factory,
-        jsx_import_source: options.jsx_import_source,
-        minify: options.minify,
-        hmr: options.hmr,
-        source_map: options.source_map.unwrap_or_default(),
-      },
-    )
+    .transform(resolver.clone(), &emit_options)
     .expect("could not transform the module");
   let r = resolver.borrow();
 
