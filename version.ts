@@ -30,7 +30,9 @@ export async function prepublish(version: string): Promise<boolean> {
   );
   const wasmStat = await Deno.stat("./pkg/esm_compiler_bg.wasm");
   console.log(
-    `wasm size: ${prettyBytes(wasmStat.size)}, gzipped: ${prettyBytes(await getGzSize("./pkg/esm_compiler_bg.wasm"))}`,
+    `wasm size: ${prettyBytes(wasmStat.size)}, gzipped: ${
+      prettyBytes(await getGzSize("./pkg/esm_compiler_bg.wasm"))
+    }`,
   );
   return true;
 }
@@ -40,7 +42,17 @@ export async function postpublish(version: string) {
   Deno.chdir("./pkg");
   await run("npm", "publish");
   if (confirm("Do you want to deploy to Cloudflare Workers?")) {
-    await run("npx", "-y", "wrangler@3", "deploy", "--name", "esm-compiler", "--compatibility-date", "2024-01-01");
+    await run(
+      "npx",
+      "-y",
+      "wrangler@3",
+      "deploy",
+      "--name",
+      "esm-compiler",
+      "--compatibility-date",
+      "2024-01-01",
+      "worker.mjs",
+    );
   }
 }
 
