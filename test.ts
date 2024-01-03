@@ -6,9 +6,18 @@ export const test = async () => {
 
   // test css transform with css modules and nesting draft
   {
+    const source = `
+      .foo {
+        color: red;
+
+        &.bar {
+          color: green
+        }
+      }
+    `;
     const { exports, code } = transformCSS(
-      "test.module.css",
-      ".foo { color: red; &.bar { color: green } }",
+      "source.module.css",
+      source,
       {
         cssModules: true,
         targets: {
@@ -26,13 +35,14 @@ export const test = async () => {
 
   // test jsx transform
   {
+    const source = `
+      import { renderToString } from "react-dom/server";
+      const msg:string = "Hello world";
+      renderToString(<p>{msg}</p>)
+    `;
     const { deps, code } = transform(
-      "index.tsx",
-      [
-        `import { renderToString } from "react-dom/server";`,
-        `const msg:string = "Hello world";`,
-        `renderToString(<p>{msg}</p>)`,
-      ].join("\n"),
+      "source.tsx",
+      source,
       {
         importMap: JSON.stringify({
           "imports": {
