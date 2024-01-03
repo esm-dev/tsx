@@ -42,6 +42,7 @@ export async function postpublish(version: string) {
   Deno.chdir("./pkg");
   await run("npm", "publish");
   if (confirm("Do you want to deploy to Cloudflare Workers?")) {
+    Deno.chdir("../");
     await run(
       "npx",
       "-y",
