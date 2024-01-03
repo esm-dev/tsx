@@ -29,6 +29,8 @@ pub struct EmitOptions {
   pub jsx_pragma_frag: Option<String>,
   pub jsx_import_source: Option<String>,
   pub minify: Option<MinifierOptions>,
+  pub tree_shaking: Option<bool>,
+  pub is_dev: Option<bool>,
   pub hmr: Option<HmrOptions>,
   pub source_map: bool,
 }
@@ -41,6 +43,8 @@ impl Default for EmitOptions {
       jsx_pragma_frag: None,
       jsx_import_source: None,
       minify: None,
+      tree_shaking: None,
+      is_dev: None,
       hmr: None,
       source_map: false,
     }
@@ -102,7 +106,7 @@ impl SWC {
       let unresolved_mark = Mark::new();
       let top_level_mark = Mark::fresh(Mark::root());
       let specifier_is_remote = resolver.borrow().specifier_is_remote;
-      let is_dev = resolver.borrow().is_dev;
+      let is_dev = options.is_dev.unwrap_or_default();
       let is_ts =
         self.specifier.ends_with(".ts") || self.specifier.ends_with(".mts") || self.specifier.ends_with(".tsx");
       let is_jsx = self.specifier.ends_with(".tsx") || self.specifier.ends_with(".jsx");
@@ -263,9 +267,12 @@ impl SWC {
             specifier: self.specifier.clone(),
             options: options.hmr.as_ref().unwrap_or(&HmrOptions::default()).clone(),
           },
-          is_dev && options.hmr.is_some() && !specifier_is_remote
+          options.hmr.is_some() && !specifier_is_remote
         ),
-        Optional::new(dce::dce(Default::default(), unresolved_mark), options.minify.is_some()),
+        Optional::new(
+          dce::dce(Default::default(), unresolved_mark),
+          options.tree_shaking.unwrap_or_default()
+        ),
         Optional::new(
           as_folder(Minifier {
             cm: self.source_map.clone(),

@@ -25,18 +25,19 @@ use wasm_bindgen::prelude::{wasm_bindgen, JsValue};
 #[derive(Deserialize)]
 #[serde(deny_unknown_fields, rename_all = "camelCase")]
 pub struct SWCOptions {
-  pub lang: Option<String>,
-  pub target: Option<String>,
+  pub import_map: Option<String>,
   pub is_dev: Option<bool>,
   pub hmr: Option<HmrOptions>,
   pub jsx_factory: Option<String>,
   pub jsx_fragment_factory: Option<String>,
   pub jsx_import_source: Option<String>,
+  pub lang: Option<String>,
   pub minify: Option<MinifierOptions>,
   pub source_map: Option<bool>,
-  pub import_map: Option<String>,
-  pub version_map: Option<HashMap<String, String>>,
+  pub target: Option<String>,
+  pub tree_shaking: Option<bool>,
   pub global_version: Option<String>,
+  pub version_map: Option<HashMap<String, String>>,
 }
 
 #[derive(Serialize)]
@@ -71,7 +72,6 @@ pub fn transform(specifier: &str, source: &str, swc_options: JsValue) -> Result<
     importmap.to_owned(),
     options.version_map.unwrap_or_default(),
     options.global_version,
-    options.is_dev.unwrap_or_default(),
   )));
   let target = match options.target.unwrap_or_default().as_str() {
     "es2015" => EsVersion::Es2015,
@@ -111,6 +111,8 @@ pub fn transform(specifier: &str, source: &str, swc_options: JsValue) -> Result<
     jsx_pragma_frag: options.jsx_fragment_factory,
     jsx_import_source,
     minify: options.minify,
+    tree_shaking: options.tree_shaking,
+    is_dev: options.is_dev,
     hmr: options.hmr,
     source_map: options.source_map.unwrap_or_default(),
   };

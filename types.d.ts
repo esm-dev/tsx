@@ -30,6 +30,7 @@ export type SWCOptions = {
   jsxImportSource?: string;
   minify?: MinifierOptions;
   sourceMap?: boolean;
+  treeShaking?: boolean;
   versionMap?: Record<string, string>;
   globalVersion?: string;
 };

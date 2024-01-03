@@ -27,8 +27,6 @@ pub struct Resolver {
   pub specifier_is_remote: bool,
   /// a ordered dependencies of the module
   pub deps: Vec<DependencyDescriptor>,
-  /// development mode
-  pub is_dev: bool,
   /// the global version
   pub global_version: Option<String>,
   /// the graph versions
@@ -43,7 +41,6 @@ impl Resolver {
     import_map: Option<ImportMap>,
     version_map: HashMap<String, String>,
     global_version: Option<String>,
-    is_dev: bool,
   ) -> Self {
     Resolver {
       specifier: specifier.into(),
@@ -52,7 +49,6 @@ impl Resolver {
       import_map,
       version_map,
       global_version,
-      is_dev,
     }
   }
 
