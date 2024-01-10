@@ -1,6 +1,6 @@
 [package]
 name = "esm-compiler"
-version = "0.3.9"
+version = "0.4.0"
 description = "The compiler for esm.sh playground written in Rust."
 repository = "https://github.com/esm-dev/esm-compiler"
 authors = ["ije"]
@@ -13,11 +13,11 @@ crate-type = ["cdylib", "rlib"]
 [dependencies]
 anyhow = "1.0.79"
 base64 = "0.21.6"
-import_map = "0.18.0"
+import_map = "0.18.1"
 path-slash = "0.2.1"
 pathdiff = "0.2.1"
-serde = { version = "1.0.194", features = ["derive"] }
-serde_json = "1.0.110"
+serde = { version = "1.0.195", features = ["derive"] }
+serde_json = "1.0.111"
 url = "2.5.0"
 
 # parcel css
@@ -30,16 +30,16 @@ parcel_sourcemap = "2.1.1"
 # crate: https://crates.io/search?q=swc_ecmascript
 swc_atoms = "0.6.5"
 swc_common = { version = "0.33.12", features = ["sourcemap"] }
-swc_ecmascript = { version = "0.237.10", features = ["codegen", "parser", "utils", "visit"] }
-swc_ecma_transforms = { version = "0.227.9", features = ["proposal", "typescript", "react", "compat", "optimization" ] }
-swc_ecma_minifier = "0.190.10"
+swc_ecmascript = { version = "0.237.18", features = ["codegen", "parser", "utils", "visit"] }
+swc_ecma_transforms = { version = "0.227.16", features = ["proposal", "typescript", "react", "compat", "optimization" ] }
+swc_ecma_minifier = "0.190.17"
 
 # wasm-bindgen
 # docs: https://rustwasm.github.io/docs/wasm-bindgen
 wasm-bindgen = { version = "0.2.89", features = ["serde-serialize"] }
 serde-wasm-bindgen = "0.6.3"
 js-sys = "0.3.66"
-getrandom = { version = "0.2.11", features = ["js"] }
+getrandom = { version = "0.2.12", features = ["js"] }
 
 [profile.release]
 # less code to include into binary
