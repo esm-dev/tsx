@@ -4,6 +4,7 @@ use crate::minifier::{Minifier, MinifierOptions};
 use crate::resolver::Resolver;
 use crate::resolver_fold::ResolverFolder;
 
+use base64::{engine::general_purpose, Engine as _};
 use std::{cell::RefCell, path::Path, rc::Rc};
 use swc_common::comments::SingleThreadedComments;
 use swc_common::errors::{Handler, HandlerFlags};
@@ -32,7 +33,7 @@ pub struct EmitOptions {
   pub tree_shaking: Option<bool>,
   pub is_dev: Option<bool>,
   pub hmr: Option<HmrOptions>,
-  pub source_map: bool,
+  pub source_map: Option<String>,
 }
 
 impl Default for EmitOptions {
@@ -46,7 +47,7 @@ impl Default for EmitOptions {
       tree_shaking: None,
       is_dev: None,
       hmr: None,
-      source_map: false,
+      source_map: None,
     }
   }
 }
@@ -60,7 +61,7 @@ pub struct SWC {
 }
 
 impl SWC {
-  /// parse source code.
+  /// Parse the source code of a JS/TS module into an AST.
   pub fn parse(specifier: &str, source: &str, lang: Option<String>) -> Result<Self, anyhow::Error> {
     let source_map = SourceMap::default();
     let source_file = source_map.new_source_file(FileName::Real(Path::new(specifier).to_path_buf()), source.into());
@@ -96,7 +97,7 @@ impl SWC {
     })
   }
 
-  /// transform a JS/TS/JSX/TSX file into a JS file, based on the supplied options.
+  /// Transpile a JS/TS module.
   pub fn transform(
     self,
     resolver: Rc<RefCell<Resolver>>,
@@ -149,6 +150,47 @@ impl SWC {
           emit_metadata: false,
           use_define_for_class_fields: false,
         }),
+        Optional::new(compat::es2016(), options.target < EsVersion::Es2016),
+        Optional::new(
+          compat::es2017(
+            compat::es2017::Config {
+              async_to_generator: compat::es2017::async_to_generator::Config {
+                ignore_function_name: assumptions.ignore_function_name,
+                ignore_function_length: assumptions.ignore_function_length
+              }
+            },
+            Some(&self.comments),
+            unresolved_mark,
+          ),
+          options.target < EsVersion::Es2017
+        ),
+        Optional::new(
+          compat::es2018(compat::es2018::Config {
+            object_rest_spread: compat::es2018::object_rest_spread::Config {
+              no_symbol: assumptions.object_rest_no_symbols,
+              set_property: assumptions.set_spread_properties,
+              pure_getters: assumptions.pure_getters,
+            }
+          }),
+          options.target < EsVersion::Es2018
+        ),
+        Optional::new(compat::es2019::es2019(), options.target < EsVersion::Es2019),
+        Optional::new(
+          compat::es2020::es2020(
+            compat::es2020::Config {
+              nullish_coalescing: compat::es2020::nullish_coalescing::Config {
+                no_document_all: assumptions.no_document_all
+              },
+              optional_chaining: compat::es2020::optional_chaining::Config {
+                no_document_all: assumptions.no_document_all,
+                pure_getter: assumptions.pure_getters
+              }
+            },
+            unresolved_mark
+          ),
+          options.target < EsVersion::Es2020
+        ),
+        Optional::new(compat::es2021::es2021(), options.target < EsVersion::Es2021),
         Optional::new(
           compat::es2022::es2022(
             Some(&self.comments),
@@ -164,55 +206,8 @@ impl SWC {
             },
             unresolved_mark
           ),
-          should_enable(options.target, EsVersion::Es2022)
+          options.target < EsVersion::Es2022
         ),
-        Optional::new(
-          compat::es2021::es2021(),
-          should_enable(options.target, EsVersion::Es2021)
-        ),
-        Optional::new(
-          compat::es2020::es2020(
-            compat::es2020::Config {
-              nullish_coalescing: compat::es2020::nullish_coalescing::Config {
-                no_document_all: assumptions.no_document_all
-              },
-              optional_chaining: compat::es2020::optional_chaining::Config {
-                no_document_all: assumptions.no_document_all,
-                pure_getter: assumptions.pure_getters
-              }
-            },
-            unresolved_mark
-          ),
-          should_enable(options.target, EsVersion::Es2020)
-        ),
-        Optional::new(
-          compat::es2019::es2019(),
-          should_enable(options.target, EsVersion::Es2019)
-        ),
-        Optional::new(
-          compat::es2018(compat::es2018::Config {
-            object_rest_spread: compat::es2018::object_rest_spread::Config {
-              no_symbol: assumptions.object_rest_no_symbols,
-              set_property: assumptions.set_spread_properties,
-              pure_getters: assumptions.pure_getters,
-            }
-          }),
-          should_enable(options.target, EsVersion::Es2018)
-        ),
-        Optional::new(
-          compat::es2017(
-            compat::es2017::Config {
-              async_to_generator: compat::es2017::async_to_generator::Config {
-                ignore_function_name: assumptions.ignore_function_name,
-                ignore_function_length: assumptions.ignore_function_length
-              }
-            },
-            Some(&self.comments),
-            unresolved_mark,
-          ),
-          should_enable(options.target, EsVersion::Es2017)
-        ),
-        Optional::new(compat::es2016(), should_enable(options.target, EsVersion::Es2016)),
         compat::reserved_words::reserved_words(),
         helpers::inject_helpers(top_level_mark),
         Optional::new(typescript::strip(top_level_mark), is_ts && !is_jsx),
@@ -291,9 +286,10 @@ impl SWC {
         fixer(Some(&self.comments)),
       );
 
+      // emit code
       let (mut code, map) = self.emit(passes, options).unwrap();
 
-      // resolve jsx-runtime url
+      // resolve jsx runtime path defined by `// @jsxImportSource` annotation
       let mut jsx_runtime = None;
       let resolver = resolver.borrow();
       for dep in &resolver.deps {
@@ -313,41 +309,45 @@ impl SWC {
     })
   }
 
-  /// Apply transform with the fold.
-  pub fn emit<T: Fold>(&self, mut fold: T, options: &EmitOptions) -> Result<(String, Option<String>), anyhow::Error> {
+  /// Emit code with a given set of passes.
+  fn emit<T: Fold>(&self, mut passes: T, options: &EmitOptions) -> Result<(String, Option<String>), anyhow::Error> {
     let program = Program::Module(self.module.clone());
-    let program = helpers::HELPERS.set(&helpers::Helpers::new(false), || program.fold_with(&mut fold));
-    let mut buf = Vec::new();
+    let program = helpers::HELPERS.set(&helpers::Helpers::new(false), || program.fold_with(&mut passes));
+    let mut src_buf = Vec::new();
     let mut src_map_buf = Vec::new();
-    let src_map = if options.source_map {
+    let src_map = if options.source_map.is_some() {
       Some(&mut src_map_buf)
     } else {
       None
     };
 
-    {
-      let writer = Box::new(JsWriter::new(self.source_map.clone(), "\n", &mut buf, src_map));
-      let mut emitter = codegen::Emitter {
-        cfg: codegen::Config::default()
-          .with_target(options.target)
-          .with_minify(options.minify.is_some()),
-        comments: Some(&self.comments),
-        cm: self.source_map.clone(),
-        wr: writer,
-      };
-      program.emit_with(&mut emitter).unwrap();
-    }
+    let writer = Box::new(JsWriter::new(self.source_map.clone(), "\n", &mut src_buf, src_map));
+    let mut emitter = codegen::Emitter {
+      cfg: codegen::Config::default()
+        .with_target(options.target)
+        .with_minify(options.minify.is_some()),
+      comments: Some(&self.comments),
+      cm: self.source_map.clone(),
+      wr: writer,
+    };
+    program.emit_with(&mut emitter).unwrap();
 
-    // output
-    let src = String::from_utf8(buf).unwrap();
-    if options.source_map {
+    let src = String::from_utf8(src_buf).unwrap();
+    if let Some(sm) = &options.source_map {
       let mut buf = Vec::new();
       self
         .source_map
         .build_source_map_from(&mut src_map_buf, None)
         .to_writer(&mut buf)
         .unwrap();
-      Ok((src, Some(String::from_utf8(buf).unwrap())))
+      if sm.eq("inline") {
+        let mut src = src;
+        src.push_str("\n//# sourceMappingURL=data:application/json;base64,");
+        src.push_str(&general_purpose::STANDARD.encode(buf));
+        Ok((src, None))
+      } else {
+        Ok((src, Some(String::from_utf8(buf).unwrap())))
+      }
     } else {
       Ok((src, None))
     }
@@ -394,8 +394,4 @@ fn get_syntax(specifier: &str, lang: Option<String>) -> Syntax {
     "tsx" => Syntax::Typescript(get_ts_config(true)),
     _ => Syntax::Es(get_es_config(false)),
   }
-}
-
-fn should_enable(target: EsVersion, feature: EsVersion) -> bool {
-  target < feature
 }

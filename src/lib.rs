@@ -33,7 +33,7 @@ pub struct SWCOptions {
   pub jsx_import_source: Option<String>,
   pub lang: Option<String>,
   pub minify: Option<MinifierOptions>,
-  pub source_map: Option<bool>,
+  pub source_map: Option<String>,
   pub target: Option<String>,
   pub tree_shaking: Option<bool>,
   pub global_version: Option<String>,
@@ -82,7 +82,7 @@ pub fn transform(specifier: &str, source: &str, swc_options: JsValue) -> Result<
     "es2020" => EsVersion::Es2020,
     "es2021" => EsVersion::Es2021,
     "es2022" => EsVersion::Es2022,
-    _ => EsVersion::Es2022, // latest version
+    _ => EsVersion::EsNext, // latest version
   };
   let module = SWC::parse(specifier, source, options.lang).expect("could not parse the module");
   let jsx_import_source = if let Some(jsx_import_source) = options.jsx_import_source {
@@ -114,7 +114,7 @@ pub fn transform(specifier: &str, source: &str, swc_options: JsValue) -> Result<
     tree_shaking: options.tree_shaking,
     is_dev: options.is_dev,
     hmr: options.hmr,
-    source_map: options.source_map.unwrap_or_default(),
+    source_map: options.source_map ,
   };
   let (code, map) = module
     .transform(resolver.clone(), &emit_options)

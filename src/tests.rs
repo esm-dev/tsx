@@ -2,7 +2,7 @@ use super::*;
 use lightningcss::targets::Browsers;
 use std::collections::HashMap;
 
-fn transform(specifer: &str, source: &str,  options: &EmitOptions) -> (String, Rc<RefCell<Resolver>>) {
+fn transform(specifer: &str, source: &str, options: &EmitOptions) -> (String, Option<String>, Rc<RefCell<Resolver>>) {
   let importmap = import_map::parse_from_json(
     &Url::from_str("file:///import_map.json").unwrap(),
     r#"{
@@ -21,11 +21,11 @@ fn transform(specifer: &str, source: &str,  options: &EmitOptions) -> (String, R
     specifer,
     Some(importmap),
     graph_versions,
-    Some("1.0.0".into())
+    Some("1.0.0".into()),
   )));
-  let (code, _) = module.transform(resolver.clone(), options).unwrap();
+  let (code, source_map) = module.transform(resolver.clone(), options).unwrap();
   println!("{}", code);
-  (code, resolver)
+  (code, source_map, resolver)
 }
 
 #[test]
@@ -62,7 +62,7 @@ fn typescript() {
 
     console.log(`${toString({class: A})}`)
   "#;
-  let (code, _) = transform("mod.ts", source,   &EmitOptions::default());
+  let (code, _, _) = transform("mod.ts", source, &EmitOptions::default());
   assert!(code.contains("var D;"));
   assert!(code.contains("enumerable(false)"));
 }
@@ -79,7 +79,7 @@ fn module_resolver() {
     import("https://esm.sh/asksomeonelse")
     new Worker("https://esm.sh/asksomeonelse")
   "#;
-  let (code, _) = transform("./foo/bar/index.js", source,  &EmitOptions::default());
+  let (code, _, _) = transform("./foo/bar/index.js", source, &EmitOptions::default());
   assert!(code.contains("\"https://esm.sh/react@18\""));
   assert!(code.contains("\"../../foo.ts?v=100\""));
   assert!(code.contains("\"https://esm.sh/preact@10.13.0\""));
@@ -101,7 +101,7 @@ fn jsx_automtic() {
       )
     }
   "#;
-  let (code, resolver) = transform(
+  let (code, _, resolver) = transform(
     "./app.tsx",
     source,
     &EmitOptions {
@@ -130,7 +130,7 @@ fn hmr() {
       )
     }
   "#;
-  let (code, _) = transform(
+  let (code, _, _) = transform(
     "./app.tsx",
     source,
     &EmitOptions {
@@ -168,7 +168,7 @@ fn tree_shaking() {
     import React from "react"
     let foo = "bar"
   "#;
-  let (code, _) = transform(
+  let (code, _, _) = transform(
     "./test.js",
     source,
     &EmitOptions {
@@ -177,6 +177,34 @@ fn tree_shaking() {
     },
   );
   assert_eq!(code, "import \"https://esm.sh/react@18\";\n");
+}
+
+#[test]
+fn source_map() {
+  let source = r#"
+    const foo:string = "bar"
+  "#;
+  let (code, source_map, _) = transform(
+    "./test.js",
+    source,
+    &EmitOptions {
+      source_map: Some("inline".to_owned()),
+      ..Default::default()
+    },
+  );
+  assert!(code.contains("//# sourceMappingURL=data:application/json;base64,"));
+  assert!(source_map.is_none());
+
+  let (code, source_map, _) = transform(
+    "./test.js",
+    source,
+    &EmitOptions {
+      source_map: Some("external".to_owned()),
+      ..Default::default()
+    },
+  );
+  assert!(!code.contains("//# sourceMappingURL=data:application/json;base64,"));
+  assert!(source_map.is_some());
 }
 
 #[test]
