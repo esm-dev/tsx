@@ -107,6 +107,8 @@ pub fn compile<'i>(filename: String, code: &'i str, config: &Config) -> Result<T
             dashed_idents: c.dashed_idents,
           }),
         }
+      } else if filename.ends_with(".module.css") {
+        Some(lightningcss::css_modules::Config::default())
       } else {
         None
       },

@@ -208,7 +208,7 @@ fn source_map() {
 }
 
 #[test]
-fn parcel_css() {
+fn lightningcss() {
   let source = r#"
     @custom-media --modern (color), (hover);
 
@@ -248,4 +248,17 @@ fn parcel_css() {
   };
   let res = css::compile("style.css".into(), source, &cfg).unwrap();
   assert_eq!(res.code, ".foo{background:#ff0;border-radius:2px;transition:background .2s}.foo.bar{color:green}@media ((color) or (hover)) and (min-width:1024px){.a{color:green}}");
+
+  let source = r#"
+    .foo {
+      background: yellow;
+    }
+    :global(.bar) {
+      color: green;
+    }
+  "#;
+  let res = css::compile("style.module.css".into(), source, &cfg).unwrap();
+  assert!(res.exports.is_some());
+  assert_eq!(res.exports.unwrap().len(), 1);
+  assert_eq!(res.code, ".fk9XWG_foo{background:#ff0}.bar{color:green}");
 }
