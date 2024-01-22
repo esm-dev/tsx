@@ -12,8 +12,8 @@ crate-type = ["cdylib", "rlib"]
 
 [dependencies]
 anyhow = "1.0.79"
-base64 = "0.21.6"
-import_map = "0.18.1"
+base64 = "0.21.7"
+import_map = "0.18.2"
 path-slash = "0.2.1"
 pathdiff = "0.2.1"
 serde = { version = "1.0.195", features = ["derive"] }
@@ -29,16 +29,16 @@ parcel_sourcemap = "2.1.1"
 # docs: https://swc.rs
 # crate: https://crates.io/search?q=swc_ecmascript
 swc_atoms = "0.6.5"
-swc_common = { version = "0.33.12", features = ["sourcemap"] }
-swc_ecmascript = { version = "0.237.18", features = ["codegen", "parser", "utils", "visit"] }
-swc_ecma_transforms = { version = "0.227.16", features = ["proposal", "typescript", "react", "compat", "optimization" ] }
-swc_ecma_minifier = "0.190.17"
+swc_common = { version = "0.33.14", features = ["sourcemap"] }
+swc_ecmascript = { version = "0.238.1", features = ["codegen", "parser", "utils", "visit"] }
+swc_ecma_transforms = { version = "0.228.1", features = ["proposal", "typescript", "react", "compat", "optimization" ] }
+swc_ecma_minifier = "0.191.1"
 
 # wasm-bindgen
 # docs: https://rustwasm.github.io/docs/wasm-bindgen
-wasm-bindgen = { version = "0.2.89", features = ["serde-serialize"] }
+wasm-bindgen = { version = "0.2.90", features = ["serde-serialize"] }
 serde-wasm-bindgen = "0.6.3"
-js-sys = "0.3.66"
+js-sys = "0.3.67"
 getrandom = { version = "0.2.12", features = ["js"] }
 
 [profile.release]

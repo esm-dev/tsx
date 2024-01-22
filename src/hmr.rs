@@ -48,6 +48,7 @@ impl Fold for HMR {
       src: Box::new(new_str(&self.options.runtime)),
       type_only: false,
       with: None,
+      phase: ImportPhase::Evaluation,
     })));
     // import.meta.hot = __CREATE_HOT_CONTEXT__($specifier)
     items.push(ModuleItem::Stmt(Stmt::Expr(ExprStmt {
@@ -101,6 +102,7 @@ impl Fold for HMR {
         )),
         type_only: false,
         with: None,
+        phase: ImportPhase::Evaluation,
       })));
       // const prevRefreshReg = $RefreshReg$
       items.push(rename_var_decl("prevRefreshReg", "$RefreshReg$"));
@@ -112,7 +114,7 @@ impl Fold for HMR {
         Expr::Arrow(ArrowExpr {
           span: DUMMY_SP,
           params: vec![pat_id("type"), pat_id("id")],
-          body: Box::new(BlockStmtOrExpr::Expr( Box::new(Expr::Call(CallExpr {
+          body: Box::new(BlockStmtOrExpr::Expr(Box::new(Expr::Call(CallExpr {
             span: DUMMY_SP,
             callee: Callee::Expr(Box::new(simple_member_expr("__REACT_REFRESH_RUNTIME__", "register"))),
             args: vec![
