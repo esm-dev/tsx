@@ -23,6 +23,13 @@ use url::Url;
 use wasm_bindgen::prelude::{wasm_bindgen, JsValue};
 
 #[derive(Deserialize)]
+#[serde(untagged)]
+pub enum Minify {
+  Bool(bool),
+  Options(MinifierOptions),
+}
+
+#[derive(Deserialize)]
 #[serde(deny_unknown_fields, rename_all = "camelCase")]
 pub struct SWCOptions {
   pub import_map: Option<String>,
@@ -32,7 +39,7 @@ pub struct SWCOptions {
   pub jsx_fragment_factory: Option<String>,
   pub jsx_import_source: Option<String>,
   pub lang: Option<String>,
-  pub minify: Option<MinifierOptions>,
+  pub minify: Option<Minify>,
   pub source_map: Option<String>,
   pub target: Option<String>,
   pub tree_shaking: Option<bool>,
@@ -105,16 +112,30 @@ pub fn transform(specifier: &str, source: &str, swc_options: JsValue) -> Result<
   } else {
     None
   };
+  let minify = if let Some(minify) = options.minify {
+    match minify {
+      Minify::Bool(minify) => {
+        if minify {
+          Some(Default::default())
+        } else {
+          None
+        }
+      }
+      Minify::Options(options) => Some(options),
+    }
+  } else {
+    None
+  };
   let emit_options = EmitOptions {
     target,
+    minify,
     jsx_pragma: options.jsx_factory,
     jsx_pragma_frag: options.jsx_fragment_factory,
     jsx_import_source,
-    minify: options.minify,
     tree_shaking: options.tree_shaking,
     is_dev: options.is_dev,
     hmr: options.hmr,
-    source_map: options.source_map ,
+    source_map: options.source_map,
   };
   let (code, map) = module
     .transform(resolver.clone(), &emit_options)

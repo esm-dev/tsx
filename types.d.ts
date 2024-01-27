@@ -28,7 +28,7 @@ export type SWCOptions = {
   jsxFactory?: string;
   jsxFragmentFactory?: string;
   jsxImportSource?: string;
-  minify?: MinifierOptions;
+  minify?: boolean | MinifierOptions;
   sourceMap?: "inline" | "external";
   treeShaking?: boolean;
   versionMap?: Record<string, string>;
