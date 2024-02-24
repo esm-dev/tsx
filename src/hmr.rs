@@ -56,10 +56,10 @@ impl Fold for HMR {
       expr: Box::new(Expr::Assign(AssignExpr {
         span: DUMMY_SP,
         op: AssignOp::Assign,
-        left: PatOrExpr::Expr(Box::new(Expr::Member(new_member_expr(
+        left: AssignTarget::Simple(SimpleAssignTarget::Member(new_member_expr(
           simple_member_expr("import", "meta"),
           "hot",
-        )))),
+        ))),
         right: Box::new(Expr::Call(CallExpr {
           span: DUMMY_SP,
           callee: Callee::Expr(Box::new(Expr::Ident(quote_ident!("__CREATE_HOT_CONTEXT__")))),
