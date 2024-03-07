@@ -27,12 +27,13 @@ export const Features = {
 };
 
 export function transform({ filename, code, ...rest }) {
-  if (typeof code !== "string") {
-    if (code instanceof Uint8Array) {
-      code = new TextDecoder().decode(code);
-    } else {
-      code = code.toString();
-    }
+  if (!code) {
+    throw new Error("code is required");
+  }
+  if (code instanceof Uint8Array) {
+    code = new TextDecoder().decode(code);
+  } else if (typeof code !== "string") {
+    code = code.toString();
   }
   return transformCSS(filename, code, rest);
 }
