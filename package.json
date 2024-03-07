@@ -28,6 +28,9 @@
     "./pkg/esm_compiler.js",
     "./pkg/esm_compiler.d.ts"
   ],
+  "scripts": {
+    "deploy": "npx -y wrangler@3 deploy --name esm-compiler --compatibility-date 2024-03-01 worker.mjs"
+  },
   "repository": {
     "type": "git",
     "url": "https://github.com/esm-dev/esm-compiler"

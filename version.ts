@@ -48,19 +48,6 @@ export async function prepublish(version: string): Promise<boolean> {
 /** `postpublish` will be invoked after published */
 export async function postpublish(version: string) {
   await run("npm", "publish");
-  if (confirm("Do you want to deploy to Cloudflare Workers?")) {
-    await run(
-      "npx",
-      "-y",
-      "wrangler@3",
-      "deploy",
-      "--name",
-      "esm-compiler",
-      "--compatibility-date",
-      "2024-03-01",
-      "worker.ts",
-    );
-  }
 }
 
 function prettyBytes(n: number) {
