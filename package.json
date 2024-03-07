@@ -1,6 +1,6 @@
 {
   "name": "esm-compiler",
-  "version": "0.5.0",
+  "version": "0.5.1",
   "description": "The compiler for esm.sh playground written in Rust.",
   "type": "module",
   "module": "./pkg/esm_compiler.js",
