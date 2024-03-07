@@ -1,32 +1,40 @@
 import { test } from "./test.ts";
 
 /** `VERSION` managed by https://deno.land/x/publish */
-export const VERSION = "0.4.5";
+export const VERSION = "0.5.0";
 
 /** `prepublish` will be invoked before publish */
 export async function prepublish(version: string): Promise<boolean> {
   Deno.chdir(new URL(".", import.meta.url).pathname);
-  const toml = await Deno.readTextFile("./Cargo.toml");
+  const cargoToml = await Deno.readTextFile("./Cargo.toml");
+  const packageJson = await Deno.readTextFile("./package.json");
   await Deno.writeTextFile(
     "./Cargo.toml",
-    toml.replace(/version = "[\d\.]+"/, `version = "${version}"`),
+    cargoToml.replace(/version = "[\d\.]+"/, `version = "${version}"`),
+  );
+  await Deno.writeTextFile(
+    "./package.json",
+    packageJson.replace(/"version": "[\d\.]+"/, `"version": "${version}"`),
   );
   const ok = await run("wasm-pack", "build", "--target", "web");
   if (!ok) {
     return false;
   }
   await test();
-  const addonDts = await Deno.readTextFile("./types.d.ts");
   const dts = await Deno.readTextFile("./pkg/esm_compiler.d.ts");
   await Deno.writeTextFile(
     "./pkg/esm_compiler.d.ts",
-    dts.replace(
-      `swc_options: any): any`,
-      `swc_options: SWCOptions): SWCTransformResult`,
-    ).replace(
-      `lightningcss_config: any): any`,
-      `lightningcss_config: LightningCSSConfig): LightningCSSTransformResult`,
-    ) + addonDts,
+    [
+      `import { SWCTransformOptions, SWCTransformResult } from "../types/swc.d.ts";`,
+      `import { LightningCSSTransformOptions, LightningCSSTransformResult } from "../types/lightningcss.d.ts";`,
+      dts.replace(
+        `swc_transform_options: any): any`,
+        `swc_transform_options: SWCTransformOptions): SWCTransformResult`,
+      ).replace(
+        `lightningcss_transform_options: any): any`,
+        `lightningcss_transform_options: LightningCSSTransformOptions): LightningCSSTransformResult`,
+      ),
+    ].join("\n"),
   );
   const wasmStat = await Deno.stat("./pkg/esm_compiler_bg.wasm");
   console.log(
@@ -39,10 +47,8 @@ export async function prepublish(version: string): Promise<boolean> {
 
 /** `postpublish` will be invoked after published */
 export async function postpublish(version: string) {
-  Deno.chdir("./pkg");
   await run("npm", "publish");
   if (confirm("Do you want to deploy to Cloudflare Workers?")) {
-    Deno.chdir("../");
     await run(
       "npx",
       "-y",
@@ -51,8 +57,8 @@ export async function postpublish(version: string) {
       "--name",
       "esm-compiler",
       "--compatibility-date",
-      "2024-01-01",
-      "worker.mjs",
+      "2024-03-01",
+      "worker.ts",
     );
   }
 }

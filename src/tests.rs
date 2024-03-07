@@ -234,19 +234,24 @@ fn lightningcss() {
       }
     }
   "#;
-  let cfg = css::Config {
+  let options = css::TransformOptions {
     targets: Some(Browsers {
       chrome: Some(95 << 16),
       ..Browsers::default()
     }),
+    include: 1 << 0, // nesting
+    exclude: 0,
+    drafts: Some(css::Drafts { custom_media: true }),
+    non_standard: None,
     minify: Some(true),
     source_map: None,
     css_modules: None,
     pseudo_classes: None,
     unused_symbols: None,
     analyze_dependencies: None,
+    error_recovery: None,
   };
-  let res = css::compile("style.css".into(), source, &cfg).unwrap();
+  let res = css::compile("style.css".into(), source, &options).unwrap();
   assert_eq!(res.code, ".foo{background:#ff0;border-radius:2px;transition:background .2s}.foo.bar{color:green}@media ((color) or (hover)) and (min-width:1024px){.a{color:green}}");
 
   let source = r#"
@@ -257,7 +262,7 @@ fn lightningcss() {
       color: green;
     }
   "#;
-  let res = css::compile("style.module.css".into(), source, &cfg).unwrap();
+  let res = css::compile("style.module.css".into(), source, &options).unwrap();
   assert!(res.exports.is_some());
   assert_eq!(res.exports.unwrap().len(), 1);
   assert_eq!(res.code, ".fk9XWG_foo{background:#ff0}.bar{color:green}");

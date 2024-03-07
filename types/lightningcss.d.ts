@@ -1,55 +1,3 @@
-/* for swc */
-
-export type HmrOptions = {
-  runtime: string;
-  reactRefresh?: boolean;
-  reactRefreshRuntime?: string;
-};
-
-export type MinifierOptions = {
-  compress?: boolean;
-  keepNames?: boolean;
-};
-
-export type SWCOptions = {
-  lang?: "ts" | "tsx" | "js" | "jsx";
-  target?:
-    | "es2015"
-    | "es2016"
-    | "es2017"
-    | "es2018"
-    | "es2019"
-    | "es2020"
-    | "es2021"
-    | "es2022";
-  importMap?: string;
-  isDev?: boolean;
-  hmr?: HmrOptions;
-  jsxFactory?: string;
-  jsxFragmentFactory?: string;
-  jsxImportSource?: string;
-  minify?: boolean | MinifierOptions;
-  sourceMap?: "inline" | "external";
-  treeShaking?: boolean;
-  versionMap?: Record<string, string>;
-  globalVersion?: string;
-};
-
-export type SWCTransformResult = {
-  readonly code: string;
-  readonly map?: string;
-  readonly deps?: DependencyDescriptor[];
-};
-
-export type DependencyDescriptor = {
-  readonly specifier: string;
-  readonly resolvedUrl: string;
-  readonly loc?: { start: number; end: number };
-  readonly dynamic?: boolean;
-};
-
-/* for lightningcss */
-
 export interface Targets {
   android?: number;
   chrome?: number;
@@ -66,13 +14,21 @@ export interface DependencyOptions {
   removeImports: boolean;
 }
 
-export interface LightningCSSConfig {
+export interface LightningCSSTransformOptions {
   /** Whether to enable minification. */
   minify?: boolean;
   /** Whether to output a source map. */
   sourceMap?: boolean;
   /** The browser targets for the generated code. */
   targets?: Targets;
+  /** Features that should always be compiled, even when supported by targets. */
+  include?: number;
+  /** Features that should never be compiled, even when unsupported by targets. */
+  exclude?: number;
+  /** Whether to enable parsing various draft syntax. */
+  drafts?: Drafts;
+  /** Whether to enable various non-standard syntax. */
+  nonStandard?: NonStandard;
   /** Whether to compile this file as a CSS module. */
   cssModules?: boolean | CSSModulesConfig;
   /**
@@ -93,6 +49,22 @@ export interface LightningCSSConfig {
    * selectors but individual names (without any . or # prefixes).
    */
   unusedSymbols?: string[];
+  /**
+   * Whether to ignore invalid rules and declarations rather than erroring.
+   * When enabled, warnings are returned, and the invalid rule or declaration is
+   * omitted from the output code.
+   */
+  errorRecovery?: boolean;
+}
+
+export interface Drafts {
+  /** Whether to enable @custom-media rules. */
+  customMedia?: boolean;
+}
+
+export interface NonStandard {
+  /** Whether to enable the non-standard >>> and /deep/ selector combinators used by Angular and Vue. */
+  deepSelectorCombinator?: boolean;
 }
 
 export interface PseudoClasses {
@@ -110,8 +82,17 @@ export interface LightningCSSTransformResult {
   readonly map?: string;
   /** CSS module exports, if enabled. */
   readonly exports?: Map<string, CSSModuleExport>;
+  /** CSS module references, if `dashedIdents` is enabled. */
+  readonly references?: Map<string, DependencyCSSModuleReference>;
   /** `@import` and `url()` dependencies, if enabled. */
   readonly dependencies?: Dependency[];
+}
+
+export interface Warning {
+  message: string;
+  type: string;
+  value?: any;
+  loc: ErrorLocation;
 }
 
 export interface CSSModulesConfig {
@@ -167,6 +148,8 @@ export interface ImportDependency {
   readonly supports: string | null;
   /** The source location where the `@import` rule was found. */
   readonly loc: SourceLocation;
+  /** The placeholder that the import was replaced with. */
+  readonly placeholder: string;
 }
 
 export interface UrlDependency {
@@ -194,3 +177,37 @@ export interface Location {
   /** The column number (0-based). */
   readonly column: number;
 }
+
+export interface ErrorLocation extends Location {
+  filename: string;
+}
+
+export const Features: {
+  Nesting: 1;
+  NotSelectorList: 2;
+  DirSelector: 4;
+  LangSelectorList: 8;
+  IsSelector: 16;
+  TextDecorationThicknessPercent: 32;
+  MediaIntervalSyntax: 64;
+  MediaRangeSyntax: 128;
+  CustomMediaQueries: 256;
+  ClampFunction: 512;
+  ColorFunction: 1024;
+  OklabColors: 2048;
+  LabColors: 4096;
+  P3Colors: 8192;
+  HexAlphaColors: 16384;
+  SpaceSeparatedColorNotation: 32768;
+  FontFamilySystemUi: 65536;
+  DoublePositionGradients: 131072;
+  VendorPrefixes: 262144;
+  LogicalProperties: 524288;
+  Selectors: 31;
+  MediaQueries: 448;
+  Colors: 64512;
+};
+
+export function transform(
+  options: LightningCSSTransformOptions & { filename: string; code: any },
+): LightningCSSTransformResult;

@@ -4,16 +4,14 @@
  * @license MPL-2.0
  */
 
-use lightningcss::css_modules::CssModuleExports;
-use lightningcss::dependencies::Dependency;
-use lightningcss::error::{Error, MinifyErrorKind, ParserError, PrinterErrorKind};
+use lightningcss::css_modules::{CssModuleExports, CssModuleReferences};
+use lightningcss::dependencies::{Dependency, DependencyOptions};
+use lightningcss::error::{Error, ErrorLocation, MinifyErrorKind, ParserError, PrinterErrorKind};
 use lightningcss::stylesheet::{MinifyOptions, ParserFlags, ParserOptions, PrinterOptions, PseudoClasses, StyleSheet};
-use lightningcss::targets::Browsers;
-use lightningcss::targets::Targets;
+use lightningcss::targets::{Browsers, Features, Targets};
 use parcel_sourcemap::SourceMap;
 use serde::{Deserialize, Serialize};
 use std::collections::HashSet;
-use std::sync::{Arc, RwLock};
 
 #[derive(Serialize)]
 #[serde(rename_all = "camelCase")]
@@ -31,26 +29,54 @@ pub struct TransformResult {
   pub code: String,
   pub map: Option<String>,
   pub exports: Option<CssModuleExports>,
+  pub references: Option<CssModuleReferences>,
   pub dependencies: Option<Vec<Dependency>>,
 }
 
 #[derive(Debug, Deserialize)]
-#[serde(rename_all = "camelCase")]
-pub struct DependencyOptions {
-  /// Whether to remove `@import` rules.
-  pub remove_imports: bool,
+#[serde(untagged)]
+pub enum AnalyzeDependenciesOption {
+  Bool(bool),
+  Config(AnalyzeDependenciesConfig),
 }
 
 #[derive(Debug, Deserialize)]
 #[serde(rename_all = "camelCase")]
-pub struct Config {
+pub struct AnalyzeDependenciesConfig {
+  preserve_imports: bool,
+}
+
+#[derive(Debug, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct Drafts {
+  #[serde(default)]
+  pub custom_media: bool,
+}
+
+#[derive(Debug, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct NonStandard {
+  #[serde(default)]
+  deep_selector_combinator: bool,
+}
+
+#[derive(Debug, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct TransformOptions {
   pub targets: Option<Browsers>,
+  #[serde(default)]
+  pub include: u32,
+  #[serde(default)]
+  pub exclude: u32,
+  pub drafts: Option<Drafts>,
+  pub non_standard: Option<NonStandard>,
   pub minify: Option<bool>,
   pub source_map: Option<bool>,
   pub css_modules: Option<CssModulesOption>,
-  pub analyze_dependencies: Option<DependencyOptions>,
+  pub analyze_dependencies: Option<AnalyzeDependenciesOption>,
   pub pseudo_classes: Option<OwnedPseudoClasses>,
   pub unused_symbols: Option<HashSet<String>>,
+  pub error_recovery: Option<bool>,
 }
 
 #[derive(Debug, Deserialize)]
@@ -90,13 +116,48 @@ impl<'a> Into<PseudoClasses<'a>> for &'a OwnedPseudoClasses {
   }
 }
 
-pub fn compile<'i>(filename: String, code: &'i str, config: &Config) -> Result<TransformResult, CompileError<'i>> {
-  let warnings = Some(Arc::new(RwLock::new(Vec::new())));
+#[derive(Serialize)]
+pub struct Warning<'i> {
+  message: String,
+  #[serde(flatten)]
+  data: ParserError<'i>,
+  loc: Option<ErrorLocation>,
+}
+
+impl<'i> From<Error<ParserError<'i>>> for Warning<'i> {
+  fn from(mut e: Error<ParserError<'i>>) -> Self {
+    // Convert to 1-based line numbers.
+    if let Some(loc) = &mut e.loc {
+      loc.line += 1;
+    }
+    Warning {
+      message: e.kind.to_string(),
+      data: e.kind,
+      loc: e.loc,
+    }
+  }
+}
+
+pub fn compile<'i>(
+  filename: String,
+  code: &'i str,
+  options: &TransformOptions,
+) -> Result<TransformResult, CompileError<'i>> {
+  let drafts = options.drafts.as_ref();
+  let non_standard = options.non_standard.as_ref();
+
+  let mut flags = ParserFlags::empty();
+  flags.set(ParserFlags::CUSTOM_MEDIA, matches!(drafts, Some(d) if d.custom_media));
+  flags.set(
+    ParserFlags::DEEP_SELECTOR_COMBINATOR,
+    matches!(non_standard, Some(v) if v.deep_selector_combinator),
+  );
+
   let mut stylesheet = StyleSheet::parse(
     &code,
     ParserOptions {
       filename: filename.clone(),
-      css_modules: if let Some(css_modules) = &config.css_modules {
+      css_modules: if let Some(css_modules) = &options.css_modules {
         match css_modules {
           CssModulesOption::Bool(true) => Some(lightningcss::css_modules::Config::default()),
           CssModulesOption::Bool(false) => None,
@@ -113,17 +174,24 @@ pub fn compile<'i>(filename: String, code: &'i str, config: &Config) -> Result<T
         None
       },
       source_index: 0,
-      error_recovery: false,
-      warnings: warnings.clone(),
-      flags: ParserFlags::NESTING | ParserFlags::CUSTOM_MEDIA,
+      error_recovery: options.error_recovery.unwrap_or_default(),
+      warnings: None,
+      flags,
     },
   )?;
+
+  let targets = Targets {
+    browsers: options.targets,
+    include: Features::from_bits_truncate(options.include),
+    exclude: Features::from_bits_truncate(options.exclude),
+  };
+
   stylesheet.minify(MinifyOptions {
-    targets: Targets::from(config.targets.clone().unwrap_or_default()),
-    unused_symbols: config.unused_symbols.clone().unwrap_or_default(),
+    targets,
+    unused_symbols: options.unused_symbols.clone().unwrap_or_default(),
   })?;
 
-  let mut source_map = if config.source_map.unwrap_or(false) {
+  let mut source_map = if options.source_map.unwrap_or(false) {
     let mut sm = SourceMap::new("/");
     sm.add_source(&filename);
     sm.set_source_content(0, code)?;
@@ -133,18 +201,22 @@ pub fn compile<'i>(filename: String, code: &'i str, config: &Config) -> Result<T
   };
 
   let res = stylesheet.to_css(PrinterOptions {
-    minify: config.minify.unwrap_or(false),
+    minify: options.minify.unwrap_or(false),
     source_map: source_map.as_mut(),
     project_root: None,
-    targets: Targets::from(config.targets.clone().unwrap_or_default()),
-    analyze_dependencies: if let Some(analyze_dependencies) = &config.analyze_dependencies {
-      Some(lightningcss::dependencies::DependencyOptions {
-        remove_imports: analyze_dependencies.remove_imports,
-      })
+    targets: Targets::from(options.targets.clone().unwrap_or_default()),
+    analyze_dependencies: if let Some(d) = &options.analyze_dependencies {
+      match d {
+        AnalyzeDependenciesOption::Bool(b) if *b => Some(DependencyOptions { remove_imports: true }),
+        AnalyzeDependenciesOption::Config(c) => Some(DependencyOptions {
+          remove_imports: !c.preserve_imports,
+        }),
+        _ => None,
+      }
     } else {
       None
     },
-    pseudo_classes: config.pseudo_classes.as_ref().map(|p| p.into()),
+    pseudo_classes: options.pseudo_classes.as_ref().map(|p| p.into()),
   })?;
 
   let map = if let Some(mut source_map) = source_map {
@@ -157,6 +229,7 @@ pub fn compile<'i>(filename: String, code: &'i str, config: &Config) -> Result<T
     code: res.code,
     map,
     exports: res.exports,
+    references: res.references,
     dependencies: res.dependencies,
   })
 }

@@ -31,7 +31,7 @@ pub enum Minify {
 
 #[derive(Deserialize)]
 #[serde(deny_unknown_fields, rename_all = "camelCase")]
-pub struct SWCOptions {
+pub struct SWCTransformOptions {
   pub import_map: Option<String>,
   pub is_dev: Option<bool>,
   pub hmr: Option<HmrOptions>,
@@ -60,8 +60,8 @@ pub struct SWCTransformOutput {
 }
 
 #[wasm_bindgen(js_name = "transform")]
-pub fn transform(specifier: &str, source: &str, swc_options: JsValue) -> Result<JsValue, JsValue> {
-  let options: SWCOptions = serde_wasm_bindgen::from_value(swc_options).unwrap();
+pub fn transform(specifier: &str, source: &str, swc_transform_options: JsValue) -> Result<JsValue, JsValue> {
+  let options: SWCTransformOptions = serde_wasm_bindgen::from_value(swc_transform_options).unwrap();
   let importmap = if let Some(import_map_json) = options.import_map {
     Some(
       import_map::parse_from_json(
@@ -153,8 +153,8 @@ pub fn transform(specifier: &str, source: &str, swc_options: JsValue) -> Result<
 }
 
 #[wasm_bindgen(js_name = "transformCSS")]
-pub fn transform_css(filename: &str, source: &str, lightningcss_config: JsValue) -> Result<JsValue, JsValue> {
-  let css_config: css::Config = serde_wasm_bindgen::from_value(lightningcss_config).unwrap();
+pub fn transform_css(filename: &str, source: &str, lightningcss_transform_options: JsValue) -> Result<JsValue, JsValue> {
+  let css_config: css::TransformOptions = serde_wasm_bindgen::from_value(lightningcss_transform_options).unwrap();
   let res = css::compile(filename.into(), source, &css_config)?;
   Ok(serde_wasm_bindgen::to_value(&res).unwrap())
 }

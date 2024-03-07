@@ -1,0 +1,36 @@
+{
+  "name": "esm-compiler",
+  "version": "0.5.0",
+  "description": "The compiler for esm.sh playground written in Rust.",
+  "type": "module",
+  "module": "./pkg/esm_compiler.js",
+  "types": "./pkg/esm_compiler.d.ts",
+  "exports": {
+    ".": {
+      "import": "./pkg/esm_compiler.js",
+      "types": "./pkg/esm_compiler.d.ts"
+    },
+    "./swc": {
+      "import": "./swc.js",
+      "types": "./types/swc.d.ts"
+    },
+    "./lightningcss": {
+      "import": "./lightningcss.js",
+      "types": "./types/lightningcss.d.ts"
+    }
+  },
+  "sideEffects": false,
+  "files": [
+    "./types/",
+    "./swc.js",
+    "./lightningcss.js",
+    "./pkg/esm_compiler_bg.wasm",
+    "./pkg/esm_compiler.js",
+    "./pkg/esm_compiler.d.ts"
+  ],
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/esm-dev/esm-compiler"
+  },
+  "license": "MIT"
+}
