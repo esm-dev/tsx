@@ -1,5 +1,5 @@
-import { initSync, transform, transformCSS } from "./pkg/esm_compiler.js";
-import wasm from "./pkg/esm_compiler_bg.wasm";
+import { initSync, transform, transformCSS } from "../pkg/esm_compiler.js";
+import wasm from "../pkg/esm_compiler_bg.wasm";
 import indexHtml from "./index.html";
 
 initSync(wasm);
@@ -16,7 +16,7 @@ export default {
       if (!filename || !source) {
         return new Response("filename or source code missing", { status: 400 });
       }
-      if (source > 1024 * 1024) {
+      if (source > 1024 * 1024) { // limit source code size to 1MB
         return new Response("source code too long", { status: 400 });
       }
       if (filename.endsWith(".css") || opts.lang === "css") {

@@ -1,7 +1,9 @@
-import init, { transform, transformCSS } from "./pkg/esm_compiler.js";
+import init, { transform, transformCSS } from "../pkg/esm_compiler.js";
 
 export const test = async () => {
-  const wasmData = await Deno.readFile("./pkg/esm_compiler_bg.wasm");
+  const wasmData = await Deno.readFile(
+    new URL("../pkg/esm_compiler_bg.wasm", import.meta.url),
+  );
   await init(wasmData);
 
   // test css transform with css modules and nesting draft

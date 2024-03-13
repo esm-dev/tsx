@@ -1,4 +1,4 @@
-import { transformCSS } from "./pkg/esm_compiler.js";
+import { transformCSS } from "../pkg/esm_compiler.js";
 
 export const Features = {
   Nesting: 1,
