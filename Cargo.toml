@@ -17,29 +17,28 @@ import_map = "0.19.1"
 path-slash = "0.2.1"
 pathdiff = "0.2.1"
 serde = { version = "1.0.197", features = ["derive"] }
-serde_json = "1.0.114"
+serde_json = "1.0.115"
 url = "2.5.0"
 
 # lightningcss
 cssparser = "0.33.0"
-lightningcss = "1.0.0-alpha.54"
+lightningcss = "1.0.0-alpha.55"
 parcel_sourcemap = "2.1.1"
 
 # swc
 # docs: https://swc.rs
 # crate: https://crates.io/search?q=swc_ecmascript
-swc_atoms = "0.6.5"
-swc_common = { version = "0.33.19", features = ["sourcemap"] }
-swc_ecmascript = { version = "0.239.18", features = ["codegen", "parser", "utils", "visit"] }
-swc_ecma_transforms = { version = "0.229.14", features = ["proposal", "typescript", "react", "compat", "optimization" ] }
-swc_ecma_minifier = "0.192.15"
+swc_atoms = "0.6.6"
+swc_common = { version = "0.33.22", features = ["sourcemap"] }
+swc_ecmascript = { version = "0.239.21", features = ["codegen", "parser", "utils", "visit"] }
+swc_ecma_transforms = { version = "0.229.18", features = ["proposal", "typescript", "react", "compat", "optimization" ] }
+swc_ecma_minifier = "0.192.21"
 
 # wasm-bindgen
 # docs: https://rustwasm.github.io/docs/wasm-bindgen
 wasm-bindgen = { version = "0.2.92", features = ["serde-serialize"] }
 serde-wasm-bindgen = "0.6.5"
 js-sys = "0.3.69"
-getrandom = { version = "0.2.12", features = ["js"] }
 
 [profile.release]
 # less code to include into binary
