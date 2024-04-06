@@ -26,14 +26,12 @@ export const Features = {
   Colors: 64512,
 };
 
-export function transform({ filename, code, ...rest }) {
-  if (!code) {
+export function transform({ filename, code, ...options }) {
+  if (typeof filename !== "string" || filename.length === 0) {
+    throw new Error("filename is required");
+  }
+  if (typeof code !== "string") {
     throw new Error("code is required");
   }
-  if (code instanceof Uint8Array) {
-    code = new TextDecoder().decode(code);
-  } else if (typeof code !== "string") {
-    code = code.toString();
-  }
-  return transformCSS(filename, code, rest);
+  return transformCSS(filename, code, options);
 }

@@ -15,6 +15,10 @@ export interface DependencyOptions {
 }
 
 export interface LightningCSSTransformOptions {
+  /** The CSS code to transform. */
+  code: string;
+  /** The file path of the CSS code. */
+  filename: string;
   /** Whether to enable minification. */
   minify?: boolean;
   /** Whether to output a source map. */
@@ -208,6 +212,4 @@ export const Features: {
   Colors: 64512;
 };
 
-export function transform(
-  options: LightningCSSTransformOptions & { filename: string; code: any },
-): LightningCSSTransformResult;
+export function transform(options: LightningCSSTransformOptions): LightningCSSTransformResult;

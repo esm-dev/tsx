@@ -17,16 +17,12 @@ export const test = async () => {
         }
       }
     `;
-    const { exports, code } = transformCSS(
-      "source.module.css",
-      source,
-      {
-        cssModules: true,
-        targets: {
-          chrome: 95 << 16,
-        },
+    const { exports, code } = transformCSS("source.module.css", source, {
+      cssModules: true,
+      targets: {
+        chrome: 95 << 16,
       },
-    );
+    });
     if (exports.size !== 2) {
       throw new Error("css modules should be enabled");
     }
@@ -42,30 +38,18 @@ export const test = async () => {
       const msg:string = "Hello world";
       renderToString(<p>{msg}</p>)
     `;
-    const { deps, code } = transform(
-      "source.tsx",
-      source,
-      {
-        importMap: JSON.stringify({
-          "imports": {
-            "@jsxImportSource": "https://esm.sh/react@18",
-            "react-dom/server": "https://esm.sh/react-dom@18/server",
-          },
-        }),
-      },
-    );
-    if (
-      !code.includes(
-        `import { jsx as _jsx } from "https://esm.sh/react@18/jsx-runtime"`,
-      )
-    ) {
+    const { deps, code } = transform("source.tsx", source, {
+      importMap: JSON.stringify({
+        "imports": {
+          "@jsxImportSource": "https://esm.sh/react@18",
+          "react-dom/server": "https://esm.sh/react-dom@18/server",
+        },
+      }),
+    });
+    if (!code.includes(`import { jsx as _jsx } from "https://esm.sh/react@18/jsx-runtime"`)) {
       throw new Error("jsx-runtime not imported");
     }
-    if (
-      !code.includes(
-        `import { renderToString } from "https://esm.sh/react-dom@18/server"`,
-      )
-    ) {
+    if (!code.includes(`import { renderToString } from "https://esm.sh/react-dom@18/server"`)) {
       throw new Error("'react-dom' should be replaced");
     }
     if (!code.includes(`_jsx("p`)) {

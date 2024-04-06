@@ -10,6 +10,8 @@ export type MinifierOptions = {
 };
 
 export type SWCTransformOptions = {
+  code: string;
+  filename: string;
   lang?: "ts" | "tsx" | "js" | "jsx";
   target?:
     | "es2015"
@@ -46,8 +48,4 @@ export type DependencyDescriptor = {
   readonly dynamic?: boolean;
 };
 
-export function transform(
-  filename: string,
-  code: string,
-  options: SWCTransformOptions,
-): SWCTransformResult;
+export function transform(options: SWCTransformOptions): SWCTransformResult;

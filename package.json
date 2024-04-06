@@ -32,7 +32,8 @@
     "./pkg/esm_compiler.d.ts"
   ],
   "scripts": {
-    "deploy": "npx -y wrangler@3 deploy --name esm-compiler --compatibility-date 2024-03-01 js/workerd.js"
+    "test": "deno run -A js/test.js",
+    "deploy": "npx -y wrangler@3 deploy --name esm-compiler --compatibility-date 2024-04-06 js/workerd.js"
   },
   "repository": {
     "type": "git",
