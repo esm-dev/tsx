@@ -1,7 +1,5 @@
-import { test } from "./js/test.js";
-
-/** `VERSION` managed by https://deno.land/x/publish */
-export const VERSION = "0.5.3";
+ /** `VERSION` managed by https://deno.land/x/publish */
+export const VERSION = "0.5.4";
 
 /** `prepublish` will be invoked before publish */
 export async function prepublish(version) {
@@ -20,6 +18,7 @@ export async function prepublish(version) {
   if (!ok) {
     return false;
   }
+  const { test } = await import("./js/test.js")
   await test();
   const dts = await Deno.readTextFile("./pkg/esm_compiler.d.ts");
   await Deno.writeTextFile(
