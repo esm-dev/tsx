@@ -8,8 +8,8 @@
 </head>
 
 <body>
-  <h1>esm-compiler at edge</h1>
-  <p>Compiles javascript modules at edge(earth).</p>
+  <h1>ESM Compiler at Edge</h1>
+  <p>Transpiles <code>JavaScript/TypeScript/CSS</code> modules at edge(earth).</p>
 
   <form action="/" method="post">
     <p>
@@ -21,7 +21,8 @@
     <p>
       <label>
         Options: <br>
-        <textarea name="options" cols="60" rows="8" style="font-family: monospace;">{}</textarea>
+        <textarea name="options" cols="60" rows="8" style="font-family:monospace;"
+          onblur="try{JSON.parse(value);style.borderColor=''}catch(e){style.borderColor='red'}">{}</textarea>
       </label>
     </p>
     <p><button type="submit">Compile</button></p>
