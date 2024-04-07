@@ -1,17 +1,15 @@
-export type HmrOptions = {
+export interface HmrOptions {
   runtime: string;
   reactRefresh?: boolean;
   reactRefreshRuntime?: string;
-};
+}
 
-export type MinifierOptions = {
+export interface MinifierOptions {
   compress?: boolean;
   keepNames?: boolean;
-};
+}
 
-export type SWCTransformOptions = {
-  code: string;
-  filename: string;
+export interface SWCTransformOptions {
   lang?: "ts" | "tsx" | "js" | "jsx";
   target?:
     | "es2015"
@@ -33,19 +31,19 @@ export type SWCTransformOptions = {
   treeShaking?: boolean;
   versionMap?: Record<string, string>;
   globalVersion?: string;
-};
+}
 
-export type SWCTransformResult = {
+export interface SWCTransformResult {
   readonly code: string;
   readonly map?: string;
   readonly deps?: DependencyDescriptor[];
-};
+}
 
-export type DependencyDescriptor = {
+export interface DependencyDescriptor {
   readonly specifier: string;
   readonly resolvedUrl: string;
   readonly loc?: { start: number; end: number };
   readonly dynamic?: boolean;
-};
+}
 
-export function transform(options: SWCTransformOptions): SWCTransformResult;
+export function transform(options: { code: string; filename: string } & SWCTransformOptions): SWCTransformResult;
