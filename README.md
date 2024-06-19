@@ -48,5 +48,4 @@ wasm-pack build --target web
 
 ```bash
 cargo test --all
-deno run -A test.ts
 ```

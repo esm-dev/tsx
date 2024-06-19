@@ -4,7 +4,7 @@
  * @license MPL-2.0
  */
 
-use lightningcss::css_modules::{CssModuleExports, CssModuleReferences};
+use lightningcss::css_modules::{Config, CssModuleExports, CssModuleReferences};
 use lightningcss::dependencies::{Dependency, DependencyOptions};
 use lightningcss::error::{Error, ErrorLocation, MinifyErrorKind, ParserError, PrinterErrorKind};
 use lightningcss::stylesheet::{MinifyOptions, ParserFlags, ParserOptions, PrinterOptions, PseudoClasses, StyleSheet};
@@ -159,17 +159,20 @@ pub fn compile<'i>(
       filename: filename.clone(),
       css_modules: if let Some(css_modules) = &options.css_modules {
         match css_modules {
-          CssModulesOption::Bool(true) => Some(lightningcss::css_modules::Config::default()),
+          CssModulesOption::Bool(true) => Some(Config::default()),
           CssModulesOption::Bool(false) => None,
-          CssModulesOption::Config(c) => Some(lightningcss::css_modules::Config {
+          CssModulesOption::Config(c) => Some(Config {
             pattern: c.pattern.as_ref().map_or(Default::default(), |pattern| {
               lightningcss::css_modules::Pattern::parse(pattern).unwrap()
             }),
             dashed_idents: c.dashed_idents,
+            animation: true,
+            grid: true,
+            custom_idents: true,
           }),
         }
       } else if filename.ends_with(".module.css") {
-        Some(lightningcss::css_modules::Config::default())
+        Some(Config::default())
       } else {
         None
       },
@@ -257,13 +260,6 @@ struct AttrConfig {
   pub targets: Option<Browsers>,
   pub minify: Option<bool>,
   pub analyze_dependencies: Option<bool>,
-}
-
-#[derive(Serialize)]
-#[serde(rename_all = "camelCase")]
-struct AttrResult {
-  code: String,
-  dependencies: Option<Vec<Dependency>>,
 }
 
 #[derive(Debug)]
