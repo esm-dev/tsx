@@ -1,4 +1,5 @@
-use std::{fmt, sync::Arc, sync::RwLock};
+use std::fmt;
+use std::sync::{Arc, RwLock};
 use swc_common::errors::{Diagnostic, DiagnosticBuilder, Emitter};
 use swc_common::{Loc, Span};
 
@@ -46,10 +47,7 @@ impl DiagnosticBuffer {
         let mut message = d.message();
         if let Some(span) = d.span.primary_span() {
           let loc = get_loc(span);
-          message = format!(
-            "{} at {}:{}:{}",
-            message, error_buffer.specifier, loc.line, loc.col_display
-          );
+          message = format!("{} at {}:{}:{}", message, error_buffer.specifier, loc.line, loc.col_display);
         }
         message
       })

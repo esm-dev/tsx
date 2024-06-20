@@ -4,6 +4,11 @@ export interface HmrOptions {
   reactRefreshRuntime?: string;
 }
 
+export interface ImportMap {
+  imports?: Record<string, string>;
+  scopes?: Record<string, Record<string, string>>;
+}
+
 export interface MinifierOptions {
   compress?: boolean;
   keepNames?: boolean;
@@ -20,7 +25,7 @@ export interface SWCTransformOptions {
     | "es2020"
     | "es2021"
     | "es2022";
-  importMap?: string;
+  importMap?: ImportMap;
   isDev?: boolean;
   hmr?: HmrOptions;
   jsxFactory?: string;

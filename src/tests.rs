@@ -149,9 +149,7 @@ fn hmr() {
   assert!(code.contains("import { __REACT_REFRESH_RUNTIME__, __REACT_REFRESH__ } from \"react-refresh/runtime\""));
   assert!(code.contains("const prevRefreshReg = $RefreshReg$"));
   assert!(code.contains("const prevRefreshSig = $RefreshSig$"));
-  assert!(code.contains(
-    "window.$RefreshReg$ = (type, id)=>__REACT_REFRESH_RUNTIME__.register(type, \"./app.tsx\" + \" \" + id);"
-  ));
+  assert!(code.contains("window.$RefreshReg$ = (type, id)=>__REACT_REFRESH_RUNTIME__.register(type, \"./app.tsx\" + \" \" + id);"));
   assert!(code.contains("window.$RefreshSig$ = __REACT_REFRESH_RUNTIME__.createSignatureFunctionForTransform"));
   assert!(code.contains("var _s = $RefreshSig$()"));
   assert!(code.contains("_s()"));

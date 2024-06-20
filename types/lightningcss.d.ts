@@ -100,6 +100,12 @@ export interface CSSModulesConfig {
   pattern?: string;
   /** Whether to rename dashed identifiers, e.g. custom properties. */
   dashedIdents?: boolean;
+  /** Whether to scope animation names. Default is true */
+  animation?: boolean;
+  /** Whether to scope grid names. Default is true */
+  grid?: boolean;
+  /** Whether to scope custom identifiers Default is true */
+  customIdents?: boolean;
 }
 
 export interface CSSModuleExport {

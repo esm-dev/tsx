@@ -26,9 +26,7 @@ const importMap = {
   }
 }
 
-const ret = transform("./App.jsx", code, {
-  importMap: json.stringify(importMap)
-})
+const ret = transform("./App.jsx", code, { importMap })
 
 console.log(ret.code)
 ```

@@ -12,6 +12,7 @@ use lightningcss::targets::{Browsers, Features, Targets};
 use parcel_sourcemap::SourceMap;
 use serde::{Deserialize, Serialize};
 use std::collections::HashSet;
+use wasm_bindgen::JsError;
 
 #[derive(Serialize)]
 #[serde(rename_all = "camelCase")]
@@ -90,8 +91,10 @@ pub enum CssModulesOption {
 #[serde(rename_all = "camelCase")]
 pub struct CssModulesConfig {
   pattern: Option<String>,
-  #[serde(default)]
-  dashed_idents: bool,
+  dashed_idents: Option<bool>,
+  animation: Option<bool>,
+  grid: Option<bool>,
+  custom_idents: Option<bool>,
 }
 
 #[derive(Debug, Deserialize)]
@@ -138,11 +141,7 @@ impl<'i> From<Error<ParserError<'i>>> for Warning<'i> {
   }
 }
 
-pub fn compile<'i>(
-  filename: String,
-  code: &'i str,
-  options: &TransformOptions,
-) -> Result<TransformResult, CompileError<'i>> {
+pub fn compile<'i>(filename: String, code: &'i str, options: &TransformOptions) -> Result<TransformResult, CompileError<'i>> {
   let drafts = options.drafts.as_ref();
   let non_standard = options.non_standard.as_ref();
 
@@ -165,10 +164,10 @@ pub fn compile<'i>(
             pattern: c.pattern.as_ref().map_or(Default::default(), |pattern| {
               lightningcss::css_modules::Pattern::parse(pattern).unwrap()
             }),
-            dashed_idents: c.dashed_idents,
-            animation: true,
-            grid: true,
-            custom_idents: true,
+            dashed_idents: c.dashed_idents.unwrap_or(false),
+            animation: c.animation.unwrap_or(true),
+            grid: c.grid.unwrap_or(true),
+            custom_idents: c.custom_idents.unwrap_or(true),
           }),
         }
       } else if filename.ends_with(".module.css") {
@@ -305,11 +304,11 @@ impl<'i> From<parcel_sourcemap::SourceMapError> for CompileError<'i> {
   }
 }
 
-impl<'i> From<CompileError<'i>> for wasm_bindgen::JsValue {
-  fn from(e: CompileError) -> wasm_bindgen::JsValue {
+impl<'i> From<CompileError<'i>> for JsError {
+  fn from(e: CompileError) -> JsError {
     match e {
-      CompileError::SourceMapError(e) => js_sys::Error::new(&e.to_string()).into(),
-      _ => js_sys::Error::new(&e.reason()).into(),
+      CompileError::SourceMapError(e) => JsError::new(&e.to_string()),
+      _ => JsError::new(&e.reason()),
     }
   }
 }

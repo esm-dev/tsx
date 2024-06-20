@@ -36,12 +36,7 @@ pub struct Resolver {
 }
 
 impl Resolver {
-  pub fn new(
-    specifier: &str,
-    import_map: Option<ImportMap>,
-    version_map: HashMap<String, String>,
-    global_version: Option<String>,
-  ) -> Self {
+  pub fn new(specifier: &str, import_map: Option<ImportMap>, version_map: HashMap<String, String>, global_version: Option<String>) -> Self {
     Resolver {
       specifier: specifier.into(),
       specifier_is_remote: is_http_url(specifier),

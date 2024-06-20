@@ -14,13 +14,14 @@ use hmr::HmrOptions;
 use minifier::MinifierOptions;
 use resolver::{is_http_url, DependencyDescriptor, Resolver};
 use serde::{Deserialize, Serialize};
+use std::cell::RefCell;
 use std::collections::HashMap;
+use std::rc::Rc;
 use std::str::FromStr;
-use std::{cell::RefCell, rc::Rc};
 use swc::{EmitOptions, SWC};
 use swc_ecmascript::ast::EsVersion;
 use url::Url;
-use wasm_bindgen::prelude::{wasm_bindgen, JsValue};
+use wasm_bindgen::prelude::*;
 
 #[derive(Deserialize)]
 #[serde(untagged)]
@@ -32,7 +33,7 @@ pub enum Minify {
 #[derive(Deserialize)]
 #[serde(deny_unknown_fields, rename_all = "camelCase")]
 pub struct SWCTransformOptions {
-  pub import_map: Option<String>,
+  pub import_map: Option<serde_json::Value>,
   pub is_dev: Option<bool>,
   pub hmr: Option<HmrOptions>,
   pub jsx_factory: Option<String>,
@@ -60,17 +61,15 @@ pub struct SWCTransformOutput {
 }
 
 #[wasm_bindgen(js_name = "transform")]
-pub fn transform(specifier: &str, source: &str, swc_transform_options: JsValue) -> Result<JsValue, JsValue> {
+pub fn transform(specifier: &str, source: &str, swc_transform_options: JsValue) -> Result<JsValue, JsError> {
   let options: SWCTransformOptions = serde_wasm_bindgen::from_value(swc_transform_options).unwrap();
   let importmap = if let Some(import_map_json) = options.import_map {
-    Some(
-      import_map::parse_from_json(
-        &Url::from_str("file:///import_map.json").unwrap(),
-        import_map_json.as_str(),
-      )
-      .expect("could not parse the import map")
-      .import_map,
-    )
+    match import_map::parse_from_value(Url::from_str("file:///import_map.json").unwrap(), import_map_json) {
+      Ok(ret) => Some(ret.import_map),
+      Err(e) => {
+        return Err(JsError::new(&e.to_string()).into());
+      }
+    }
   } else {
     None
   };
@@ -91,10 +90,16 @@ pub fn transform(specifier: &str, source: &str, swc_transform_options: JsValue) 
     "es2022" => EsVersion::Es2022,
     _ => EsVersion::EsNext, // latest version
   };
-  let module = SWC::parse(specifier, source, options.lang).expect("could not parse the module");
+  let module = match SWC::parse(specifier, source, options.lang) {
+    Ok(ret) => ret,
+    Err(e) => {
+      return Err(JsError::new(&e.to_string()).into());
+    }
+  };
   let jsx_import_source = if let Some(jsx_import_source) = options.jsx_import_source {
     Some(jsx_import_source)
   } else if let Some(importmap) = importmap {
+    // check `@jsxImportSource` in the import map
     if options.jsx_factory.is_none() && options.jsx_fragment_factory.is_none() {
       let referrer = if is_http_url(specifier) {
         Url::from_str(specifier).unwrap()
@@ -129,31 +134,34 @@ pub fn transform(specifier: &str, source: &str, swc_transform_options: JsValue) 
   let emit_options = EmitOptions {
     target,
     minify,
+    jsx_import_source,
     jsx_pragma: options.jsx_factory,
     jsx_pragma_frag: options.jsx_fragment_factory,
-    jsx_import_source,
     tree_shaking: options.tree_shaking,
     is_dev: options.is_dev,
     hmr: options.hmr,
     source_map: options.source_map,
   };
-  let (code, map) = module
-    .transform(resolver.clone(), &emit_options)
-    .expect("could not transform the module");
+  let (code, map) = match module.transform(resolver.clone(), &emit_options) {
+    Ok(ret) => ret,
+    Err(e) => {
+      return Err(JsError::new(&e.to_string()).into());
+    }
+  };
   let r = resolver.borrow();
 
   Ok(
     serde_wasm_bindgen::to_value(&SWCTransformOutput {
       code,
-      deps: r.deps.clone(),
       map,
+      deps: r.deps.clone(),
     })
     .unwrap(),
   )
 }
 
 #[wasm_bindgen(js_name = "transformCSS")]
-pub fn transform_css(filename: &str, source: &str, lightningcss_transform_options: JsValue) -> Result<JsValue, JsValue> {
+pub fn transform_css(filename: &str, source: &str, lightningcss_transform_options: JsValue) -> Result<JsValue, JsError> {
   let css_config: css::TransformOptions = serde_wasm_bindgen::from_value(lightningcss_transform_options).unwrap();
   let res = css::compile(filename.into(), source, &css_config)?;
   Ok(serde_wasm_bindgen::to_value(&res).unwrap())

@@ -1,6 +1,5 @@
 use crate::swc_helpers::{
-  import_name, is_call_expr_by_name, new_member_expr, new_str, pat_id, rename_var_decl, simple_member_expr,
-  window_assign,
+  import_name, is_call_expr_by_name, new_member_expr, new_str, pat_id, rename_var_decl, simple_member_expr, window_assign,
 };
 use serde::Deserialize;
 use swc_common::DUMMY_SP;
@@ -89,16 +88,9 @@ impl Fold for HMR {
       // import { __REACT_REFRESH_RUNTIME__, __REACT_REFRESH__ } from "REACT_REFRESH_RUNTIME"
       items.push(ModuleItem::ModuleDecl(ModuleDecl::Import(ImportDecl {
         span: DUMMY_SP,
-        specifiers: vec![
-          import_name("__REACT_REFRESH_RUNTIME__"),
-          import_name("__REACT_REFRESH__"),
-        ],
+        specifiers: vec![import_name("__REACT_REFRESH_RUNTIME__"), import_name("__REACT_REFRESH__")],
         src: Box::new(new_str(
-          &self
-            .options
-            .react_refresh_runtime
-            .clone()
-            .unwrap_or("react-refresh/runtime".into()),
+          &self.options.react_refresh_runtime.clone().unwrap_or("react-refresh/runtime".into()),
         )),
         type_only: false,
         with: None,
@@ -158,15 +150,9 @@ impl Fold for HMR {
 
     if react_refresh {
       // window.$RefreshReg$ = prevRefreshReg
-      items.push(window_assign(
-        "$RefreshReg$",
-        Expr::Ident(quote_ident!("prevRefreshReg")),
-      ));
+      items.push(window_assign("$RefreshReg$", Expr::Ident(quote_ident!("prevRefreshReg"))));
       // window.$RefreshSig$ = prevRefreshSig
-      items.push(window_assign(
-        "$RefreshSig$",
-        Expr::Ident(quote_ident!("prevRefreshSig")),
-      ));
+      items.push(window_assign("$RefreshSig$", Expr::Ident(quote_ident!("prevRefreshSig"))));
       // import.meta.hot.accept(__REACT_REFRESH__)
       items.push(ModuleItem::Stmt(Stmt::Expr(ExprStmt {
         span: DUMMY_SP,

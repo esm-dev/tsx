@@ -39,12 +39,12 @@ export const test = async () => {
       renderToString(<p>{msg}</p>)
     `;
     const { deps, code } = transform("source.tsx", source, {
-      importMap: JSON.stringify({
+      importMap:  {
         "imports": {
           "@jsxImportSource": "https://esm.sh/react@18",
           "react-dom/server": "https://esm.sh/react-dom@18/server",
         },
-      }),
+      },
     });
     if (!code.includes(`import { jsx as _jsx } from "https://esm.sh/react@18/jsx-runtime"`)) {
       throw new Error("jsx-runtime not imported");

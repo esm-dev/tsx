@@ -311,17 +311,16 @@ impl SWC {
 
   /// Emit code with a given set of passes.
   fn emit<T: Fold>(&self, mut passes: T, options: &EmitOptions) -> Result<(String, Option<String>), anyhow::Error> {
+    let eol = "\n";
     let program = Program::Module(self.module.clone());
     let program = helpers::HELPERS.set(&helpers::Helpers::new(false), || program.fold_with(&mut passes));
-    let mut src_buf = Vec::new();
-    let mut src_map_buf = Vec::new();
-    let src_map = if options.source_map.is_some() {
-      Some(&mut src_map_buf)
+    let mut js_buf = Vec::new();
+    let mut map_buf = Vec::new();
+    let writer = if options.source_map.is_some() {
+      JsWriter::new(self.source_map.clone(), eol, &mut js_buf, Some(&mut map_buf))
     } else {
-      None
+      JsWriter::new(self.source_map.clone(), eol, &mut js_buf, None)
     };
-
-    let writer = Box::new(JsWriter::new(self.source_map.clone(), "\n", &mut src_buf, src_map));
     let mut emitter = codegen::Emitter {
       cfg: codegen::Config::default()
         .with_target(options.target)
@@ -332,24 +331,24 @@ impl SWC {
     };
     program.emit_with(&mut emitter).unwrap();
 
-    let src = String::from_utf8(src_buf).unwrap();
+    let js = String::from_utf8(js_buf).unwrap();
     if let Some(sm) = &options.source_map {
-      let mut buf = Vec::new();
+      let mut source_map = Vec::new();
       self
         .source_map
-        .build_source_map_from(&mut src_map_buf, None)
-        .to_writer(&mut buf)
+        .build_source_map_from(&mut map_buf, None)
+        .to_writer(&mut source_map)
         .unwrap();
       if sm.eq("inline") {
-        let mut src = src;
+        let mut src = js;
         src.push_str("\n//# sourceMappingURL=data:application/json;base64,");
-        src.push_str(&general_purpose::STANDARD.encode(buf));
+        src.push_str(&general_purpose::STANDARD.encode(source_map));
         Ok((src, None))
       } else {
-        Ok((src, Some(String::from_utf8(buf).unwrap())))
+        Ok((js, Some(String::from_utf8(source_map).unwrap())))
       }
     } else {
-      Ok((src, None))
+      Ok((js, None))
     }
   }
 }
