@@ -1,6 +1,6 @@
 [package]
 name = "esm-compiler"
-version = "0.5.7"
+version = "0.6.0"
 description = "The compiler for esm.sh playground written in Rust."
 repository = "https://github.com/esm-dev/esm-compiler"
 authors = ["ije"]
@@ -38,15 +38,14 @@ swc_ecma_minifier = "0.197.0"
 # docs: https://rustwasm.github.io/docs/wasm-bindgen
 wasm-bindgen = { version = "0.2.92", features = ["serde-serialize"] }
 serde-wasm-bindgen = "0.6.5"
-js-sys = "0.3.69"
 getrandom = { version = "0.2.15", features = ["js"] }
 
 [profile.release]
-# less code to include into binary
-panic = 'abort'
-# optimization over all codebase (better optimization, slower build)
-codegen-units = 1
 # optimization for size (more aggressive)
 opt-level = 'z'
 # link time optimization using using whole-program analysis
 lto = true
+# less code to include into binary
+panic = 'abort'
+# optimization over all codebase (better optimization, slower build)
+codegen-units = 1
