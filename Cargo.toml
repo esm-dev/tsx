@@ -11,7 +11,6 @@ edition = "2021"
 crate-type = ["cdylib", "rlib"]
 
 [dependencies]
-anyhow = "1.0.86"
 base64 = "0.22.1"
 import_map = "0.19.1"
 path-slash = "0.2.1"

@@ -8,7 +8,7 @@ mod swc;
 mod swc_helpers;
 
 #[cfg(test)]
-mod tests;
+mod test;
 
 use hmr::HmrOptions;
 use minifier::MinifierOptions;

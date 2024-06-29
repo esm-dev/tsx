@@ -15,9 +15,7 @@ use swc_ecma_transforms::proposals::decorators;
 use swc_ecma_transforms::typescript::{tsx, typescript};
 use swc_ecma_transforms::{compat, fixer, helpers, hygiene, react, Assumptions};
 use swc_ecmascript::ast::{EsVersion, Module, Program};
-use swc_ecmascript::codegen;
-use swc_ecmascript::codegen::text_writer::JsWriter;
-use swc_ecmascript::codegen::Node;
+use swc_ecmascript::codegen::{text_writer::JsWriter, Config, Emitter, Node};
 use swc_ecmascript::parser::lexer::Lexer;
 use swc_ecmascript::parser::{EsConfig, StringInput, Syntax, TsConfig};
 use swc_ecmascript::visit::{as_folder, Fold, FoldWith};
@@ -62,7 +60,7 @@ pub struct SWC {
 
 impl SWC {
   /// Parse the source code of a JS/TS module into an AST.
-  pub fn parse(specifier: &str, source: &str, lang: Option<String>) -> Result<Self, anyhow::Error> {
+  pub fn parse(specifier: &str, source: &str, lang: Option<String>) -> Result<Self, DiagnosticBuffer> {
     let source_map = SourceMap::default();
     let source_file = source_map.new_source_file(FileName::Real(Path::new(specifier).to_path_buf()), source.into());
     let sm = &source_map;
@@ -98,18 +96,13 @@ impl SWC {
   }
 
   /// Transpile a JS/TS module.
-  pub fn transform(
-    self,
-    resolver: Rc<RefCell<Resolver>>,
-    options: &EmitOptions,
-  ) -> Result<(String, Option<String>), anyhow::Error> {
+  pub fn transform(self, resolver: Rc<RefCell<Resolver>>, options: &EmitOptions) -> Result<(String, Option<String>), DiagnosticBuffer> {
     swc_common::GLOBALS.set(&Globals::new(), || {
       let unresolved_mark = Mark::new();
       let top_level_mark = Mark::fresh(Mark::root());
       let specifier_is_remote = resolver.borrow().specifier_is_remote;
       let is_dev = options.is_dev.unwrap_or_default();
-      let is_ts =
-        self.specifier.ends_with(".ts") || self.specifier.ends_with(".mts") || self.specifier.ends_with(".tsx");
+      let is_ts = self.specifier.ends_with(".ts") || self.specifier.ends_with(".mts") || self.specifier.ends_with(".tsx");
       let is_jsx = self.specifier.ends_with(".tsx") || self.specifier.ends_with(".jsx");
       let react_options = if let Some(jsx_import_source) = &options.jsx_import_source {
         let mut resolver = resolver.borrow_mut();
@@ -287,7 +280,7 @@ impl SWC {
       );
 
       // emit code
-      let (mut code, map) = self.emit(passes, options).unwrap();
+      let (mut code, map) = self.emit(passes, options);
 
       // resolve jsx runtime path defined by `// @jsxImportSource` annotation
       let mut jsx_runtime = None;
@@ -299,10 +292,7 @@ impl SWC {
         }
       }
       if let Some((jsx_runtime, import_url)) = jsx_runtime {
-        code = code.replace(
-          format!("\"{}\"", jsx_runtime).as_str(),
-          format!("\"{}\"", import_url).as_str(),
-        );
+        code = code.replace(format!("\"{}\"", jsx_runtime).as_str(), format!("\"{}\"", import_url).as_str());
       }
 
       Ok((code, map))
@@ -310,7 +300,7 @@ impl SWC {
   }
 
   /// Emit code with a given set of passes.
-  fn emit<T: Fold>(&self, mut passes: T, options: &EmitOptions) -> Result<(String, Option<String>), anyhow::Error> {
+  fn emit<T: Fold>(&self, mut passes: T, options: &EmitOptions) -> (String, Option<String>) {
     let eol = "\n";
     let program = Program::Module(self.module.clone());
     let program = helpers::HELPERS.set(&helpers::Helpers::new(false), || program.fold_with(&mut passes));
@@ -321,34 +311,32 @@ impl SWC {
     } else {
       JsWriter::new(self.source_map.clone(), eol, &mut js_buf, None)
     };
-    let mut emitter = codegen::Emitter {
-      cfg: codegen::Config::default()
-        .with_target(options.target)
-        .with_minify(options.minify.is_some()),
+    let mut emitter = Emitter {
+      cfg: Config::default().with_target(options.target).with_minify(options.minify.is_some()),
       comments: Some(&self.comments),
       cm: self.source_map.clone(),
       wr: writer,
     };
-    program.emit_with(&mut emitter).unwrap();
+    program.emit_with(&mut emitter).expect("failed to emit code");
 
-    let js = String::from_utf8(js_buf).unwrap();
+    let js = String::from_utf8(js_buf).expect("invalid utf8 character detected");
     if let Some(sm) = &options.source_map {
       let mut source_map = Vec::new();
       self
         .source_map
         .build_source_map_from(&mut map_buf, None)
         .to_writer(&mut source_map)
-        .unwrap();
+        .expect("failed to build source map");
       if sm.eq("inline") {
         let mut src = js;
         src.push_str("\n//# sourceMappingURL=data:application/json;base64,");
         src.push_str(&general_purpose::STANDARD.encode(source_map));
-        Ok((src, None))
+        (src, None)
       } else {
-        Ok((js, Some(String::from_utf8(source_map).unwrap())))
+        (js, Some(String::from_utf8(source_map).expect("invalid utf8 character detected")))
       }
     } else {
-      Ok((js, None))
+      (js, None)
     }
   }
 }

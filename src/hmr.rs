@@ -1,6 +1,4 @@
-use crate::swc_helpers::{
-  import_name, is_call_expr_by_name, new_member_expr, new_str, pat_id, rename_var_decl, simple_member_expr, window_assign,
-};
+use crate::swc_helpers::*;
 use serde::Deserialize;
 use swc_common::DUMMY_SP;
 use swc_ecmascript::ast::*;

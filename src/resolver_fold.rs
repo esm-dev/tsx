@@ -1,5 +1,5 @@
 use crate::resolver::Resolver;
-use crate::swc_helpers::{is_call_expr_by_name, new_str};
+use crate::swc_helpers::*;
 use std::cell::RefCell;
 use std::rc::Rc;
 use swc_common::Span;
