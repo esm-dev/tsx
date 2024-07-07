@@ -1,6 +1,6 @@
 [package]
 name = "esm-compiler"
-version = "0.6.0"
+version = "0.6.1"
 description = "The compiler for esm.sh playground written in Rust."
 repository = "https://github.com/esm-dev/esm-compiler"
 authors = ["ije"]

@@ -1,5 +1,5 @@
 /** `VERSION` managed by https://deno.land/x/publish */
-export const VERSION = "0.6.0";
+export const VERSION = "0.6.1";
 
 export async function prepublish(version) {
   const cargoToml = await Deno.readTextFile("./Cargo.toml");
