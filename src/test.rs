@@ -4,7 +4,7 @@ use std::collections::HashMap;
 
 fn transform(specifer: &str, source: &str, options: &EmitOptions) -> (String, Option<String>, Rc<RefCell<Resolver>>) {
   let importmap = import_map::parse_from_json(
-    &Url::from_str("file:///import_map.json").unwrap(),
+    Url::from_str("file:///import_map.json").unwrap(),
     r#"{
       "imports": {
         "~/": "./",

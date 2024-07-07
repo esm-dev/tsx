@@ -17,7 +17,7 @@ use swc_ecma_transforms::{compat, fixer, helpers, hygiene, react, Assumptions};
 use swc_ecmascript::ast::{EsVersion, Module, Program};
 use swc_ecmascript::codegen::{text_writer::JsWriter, Config, Emitter, Node};
 use swc_ecmascript::parser::lexer::Lexer;
-use swc_ecmascript::parser::{EsConfig, StringInput, Syntax, TsConfig};
+use swc_ecmascript::parser::{  EsSyntax, StringInput, Syntax, TsSyntax};
 use swc_ecmascript::visit::{as_folder, Fold, FoldWith};
 
 /// Options for transpiling a module.
@@ -341,23 +341,23 @@ impl SWC {
   }
 }
 
-fn get_es_config(jsx: bool) -> EsConfig {
-  EsConfig {
+fn get_es_config(jsx: bool) -> EsSyntax {
+  EsSyntax {
     fn_bind: true,
     export_default_from: true,
     allow_super_outside_method: true,
     allow_return_outside_function: true,
     decorators: true,
     jsx,
-    ..EsConfig::default()
+    ..EsSyntax::default()
   }
 }
 
-fn get_ts_config(tsx: bool) -> TsConfig {
-  TsConfig {
+fn get_ts_config(tsx: bool) -> TsSyntax {
+  TsSyntax {
     decorators: true,
     tsx,
-    ..TsConfig::default()
+    ..TsSyntax::default()
   }
 }
 
