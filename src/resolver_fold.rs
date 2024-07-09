@@ -11,6 +11,16 @@ pub struct ResolverFolder {
   pub mark_src_location: Option<bool>,
 }
 
+impl ResolverFolder {
+  fn as_location(&self, span: &Span) -> Option<Span> {
+    if self.mark_src_location.unwrap_or(false) {
+      Some(span.clone())
+    } else {
+      None
+    }
+  }
+}
+
 impl Fold for ResolverFolder {
   noop_fold_type!();
 
@@ -29,11 +39,7 @@ impl Fold for ResolverFolder {
                 ModuleItem::ModuleDecl(ModuleDecl::Import(import_decl))
               } else {
                 let mut resolver = self.resolver.borrow_mut();
-                let resolved_url = resolver.resolve(
-                  import_decl.src.value.as_ref(),
-                  false,
-                  mark_span(&import_decl.src.span, self.mark_src_location.unwrap_or(false)),
-                );
+                let resolved_url = resolver.resolve(import_decl.src.value.as_ref(), false, self.as_location(&import_decl.src.span));
                 ModuleItem::ModuleDecl(ModuleDecl::Import(ImportDecl {
                   src: Box::new(new_str(&resolved_url)),
                   ..import_decl
@@ -60,11 +66,7 @@ impl Fold for ResolverFolder {
                 }))
               } else {
                 let mut resolver = self.resolver.borrow_mut();
-                let resolved_url = resolver.resolve(
-                  src.value.as_ref(),
-                  false,
-                  mark_span(&src.span, self.mark_src_location.unwrap_or(false)),
-                );
+                let resolved_url = resolver.resolve(src.value.as_ref(), false, self.as_location(&src.span));
                 ModuleItem::ModuleDecl(ModuleDecl::ExportNamed(NamedExport {
                   span,
                   specifiers,
@@ -82,11 +84,7 @@ impl Fold for ResolverFolder {
               type_only,
             }) => {
               let mut resolver = self.resolver.borrow_mut();
-              let resolved_url = resolver.resolve(
-                src.value.as_ref(),
-                false,
-                mark_span(&src.span, self.mark_src_location.unwrap_or(false)),
-              );
+              let resolved_url = resolver.resolve(src.value.as_ref(), false, self.as_location(&src.span));
               ModuleItem::ModuleDecl(ModuleDecl::ExportAll(ExportAll {
                 span,
                 src: Box::new(new_str(&resolved_url)),
@@ -127,11 +125,7 @@ impl Fold for ResolverFolder {
         };
         if let Some(src) = src {
           let mut resolver = self.resolver.borrow_mut();
-          let new_src = resolver.resolve(
-            src.value.as_ref(),
-            true,
-            mark_span(&src.span, self.mark_src_location.unwrap_or(false)),
-          );
+          let new_src = resolver.resolve(src.value.as_ref(), true, self.as_location(&src.span));
 
           args[0] = ExprOrSpread {
             spread: None,
@@ -159,11 +153,7 @@ impl Fold for ResolverFolder {
       };
       if let Some(src) = src {
         let mut resolver = self.resolver.borrow_mut();
-        let new_src = resolver.resolve(
-          src.value.as_ref(),
-          true,
-          mark_span(&src.span, self.mark_src_location.unwrap_or(false)),
-        );
+        let new_src = resolver.resolve(src.value.as_ref(), true, self.as_location(&src.span));
 
         call.args[0] = ExprOrSpread {
           spread: None,
@@ -173,13 +163,5 @@ impl Fold for ResolverFolder {
     }
 
     call.fold_children_with(self)
-  }
-}
-
-fn mark_span(span: &Span, ok: bool) -> Option<Span> {
-  if ok {
-    Some(span.clone())
-  } else {
-    None
   }
 }

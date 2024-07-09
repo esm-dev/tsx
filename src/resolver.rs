@@ -127,20 +127,13 @@ pub fn is_http_url(url: &str) -> bool {
   return url.starts_with("https://") || url.starts_with("http://");
 }
 
-pub fn is_esm_sh_url(url: &str) -> bool {
-  return url.starts_with("https://esm.sh/") || url.starts_with("http://esm.sh/");
-}
-
 pub fn is_css_url(url: &str) -> bool {
-  if is_esm_sh_url(url) {
+  if is_http_url(url) {
     let url = Url::from_str(url).unwrap();
-    for (key, _value) in url.query_pairs() {
-      if key.eq("css") {
-        return true;
-      }
-    }
+    let pathname = url.path();
+    return pathname.ends_with(".css");
   }
-  return url.ends_with(".css") || url.contains(".css?");
+  return url.ends_with(".css");
 }
 
 fn is_false(value: &bool) -> bool {

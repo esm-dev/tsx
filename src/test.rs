@@ -139,6 +139,7 @@ fn hmr() {
         runtime: "/hmr.js".to_owned(),
         react_refresh: Some(true),
         react_refresh_runtime: Some("react-refresh/runtime".to_owned()),
+        ..Default::default()
       }),
       jsx_import_source: Some("https://esm.sh/react@18".to_owned()),
       ..Default::default()
