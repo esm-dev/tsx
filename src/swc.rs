@@ -26,29 +26,29 @@ use swc_ecmascript::visit::{as_folder, Fold, FoldWith};
 /// Options for transpiling a module.
 #[derive(Clone)]
 pub struct EmitOptions {
+  pub source_map: Option<String>,
+  pub is_dev: bool,
+  pub hmr: Option<HmrOptions>,
   pub target: EsVersion,
   pub jsx_pragma: Option<String>,
   pub jsx_pragma_frag: Option<String>,
   pub jsx_import_source: Option<String>,
   pub minify: Option<MinifierOptions>,
-  pub tree_shaking: Option<bool>,
-  pub is_dev: Option<bool>,
-  pub hmr: Option<HmrOptions>,
-  pub source_map: Option<String>,
+  pub tree_shaking: bool,
 }
 
 impl Default for EmitOptions {
   fn default() -> Self {
     EmitOptions {
+      source_map: None,
+      is_dev: false,
+      hmr: None,
       target: EsVersion::Es2022,
       jsx_pragma: None,
       jsx_pragma_frag: None,
       jsx_import_source: None,
       minify: None,
-      tree_shaking: None,
-      is_dev: None,
-      hmr: None,
-      source_map: None,
+      tree_shaking: false,
     }
   }
 }
@@ -103,7 +103,6 @@ impl SWC {
     swc_common::GLOBALS.set(&Globals::new(), || {
       let unresolved_mark = Mark::new();
       let top_level_mark = Mark::new();
-      let is_dev = options.is_dev.unwrap_or_default();
       let is_ts = self.specifier.ends_with(".ts") || self.specifier.ends_with(".mts") || self.specifier.ends_with(".tsx");
       let is_jsx = self.specifier.ends_with(".tsx") || self.specifier.ends_with(".jsx");
       let specifier_is_remote = resolver.borrow().specifier_is_remote;
@@ -111,14 +110,14 @@ impl SWC {
         react::Options {
           runtime: Some(react::Runtime::Automatic),
           import_source: Some(jsx_import_source.to_owned()),
-          development: Some(is_dev),
+          development: Some(options.is_dev),
           ..Default::default()
         }
       } else {
         react::Options {
           pragma: options.jsx_pragma.clone(),
           pragma_frag: options.jsx_pragma_frag.clone(),
-          development: Some(is_dev),
+          development: Some(options.is_dev),
           ..Default::default()
         }
       };
@@ -210,13 +209,13 @@ impl SWC {
           ),
           is_ts && is_jsx
         ),
-        Optional::new(react::jsx_src(is_dev, self.source_map.clone()), is_jsx),
+        Optional::new(react::jsx_src(options.is_dev, self.source_map.clone()), is_jsx),
         Optional::new(
           react::jsx(
             self.source_map.clone(),
             Some(&self.comments),
             react::Options {
-              development: Some(is_dev),
+              development: Some(options.is_dev),
               ..jsx_options
             },
             top_level_mark,
@@ -226,7 +225,7 @@ impl SWC {
         ),
         Optional::new(
           react::refresh(
-            is_dev,
+            options.is_dev,
             Some(react::RefreshOptions {
               refresh_reg: "$RefreshReg$".into(),
               refresh_sig: "$RefreshSig$".into(),
@@ -261,7 +260,7 @@ impl SWC {
         helpers::inject_helpers(top_level_mark),
         Optional::new(
           dce::dce(Default::default(), unresolved_mark),
-          options.tree_shaking.unwrap_or_default()
+          options.tree_shaking
         ),
         Optional::new(
           as_folder(Minifier {

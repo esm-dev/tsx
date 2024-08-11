@@ -134,7 +134,7 @@ fn hmr() {
     "./app.tsx",
     source,
     &EmitOptions {
-      is_dev: Some(true),
+      is_dev: true,
       hmr: Some(HmrOptions {
         runtime: "/hmr.js".to_owned(),
         react_refresh: Some(true),
@@ -171,7 +171,15 @@ fn tree_shaking() {
     "./test.js",
     source,
     &EmitOptions {
-      tree_shaking: Some(true),
+      ..Default::default()
+    },
+  );
+  assert_eq!(code, "import React from \"https://esm.sh/react@18\";\nlet foo = \"bar\";\n");
+  let (code, _, _) = transform(
+    "./test.js",
+    source,
+    &EmitOptions {
+      tree_shaking: true,
       ..Default::default()
     },
   );

@@ -16,6 +16,10 @@ export interface MinifierOptions {
 
 export interface SWCTransformOptions {
   lang?: "ts" | "tsx" | "js" | "jsx";
+  sourceMap?: "inline" | "external";
+  importMap?: ImportMap;
+  isDev?: boolean;
+  hmr?: HmrOptions;
   target?:
     | "es2015"
     | "es2016"
@@ -25,14 +29,10 @@ export interface SWCTransformOptions {
     | "es2020"
     | "es2021"
     | "es2022";
-  importMap?: ImportMap;
-  isDev?: boolean;
-  hmr?: HmrOptions;
   jsxFactory?: string;
   jsxFragmentFactory?: string;
   jsxImportSource?: string;
   minify?: boolean | MinifierOptions;
-  sourceMap?: "inline" | "external";
   treeShaking?: boolean;
   versionMap?: Record<string, string>;
   globalVersion?: string;

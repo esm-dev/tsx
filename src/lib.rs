@@ -33,16 +33,16 @@ pub enum Minify {
 #[derive(Deserialize)]
 #[serde(deny_unknown_fields, rename_all = "camelCase")]
 pub struct SWCTransformOptions {
+  pub lang: Option<String>,
+  pub source_map: Option<String>,
   pub import_map: Option<serde_json::Value>,
   pub is_dev: Option<bool>,
   pub hmr: Option<HmrOptions>,
+  pub target: Option<String>,
   pub jsx_factory: Option<String>,
   pub jsx_fragment_factory: Option<String>,
   pub jsx_import_source: Option<String>,
-  pub lang: Option<String>,
   pub minify: Option<Minify>,
-  pub source_map: Option<String>,
-  pub target: Option<String>,
   pub tree_shaking: Option<bool>,
   pub global_version: Option<String>,
   pub version_map: Option<HashMap<String, String>>,
@@ -132,15 +132,15 @@ pub fn transform(specifier: &str, source: &str, swc_transform_options: JsValue) 
     None
   };
   let emit_options = EmitOptions {
+    source_map: options.source_map,
+    is_dev: options.is_dev.unwrap_or_default(),
+    hmr: options.hmr,
     target,
-    minify,
     jsx_import_source,
     jsx_pragma: options.jsx_factory,
     jsx_pragma_frag: options.jsx_fragment_factory,
-    tree_shaking: options.tree_shaking,
-    is_dev: options.is_dev,
-    hmr: options.hmr,
-    source_map: options.source_map,
+    minify,
+    tree_shaking: options.tree_shaking.unwrap_or_default(),
   };
   let (code, map) = match module.transform(resolver.clone(), &emit_options) {
     Ok(ret) => ret,
