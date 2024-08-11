@@ -1,8 +1,8 @@
 use crate::error::{DiagnosticBuffer, ErrorBuffer};
+use crate::graph::ImportAnalyzer;
 use crate::hmr::{HmrOptions, HMR};
 use crate::minifier::{Minifier, MinifierOptions};
 use crate::resolver::Resolver;
-use crate::graph::ImportAnalyzer;
 
 use base64::{engine::general_purpose, Engine as _};
 use std::{cell::RefCell, path::Path, rc::Rc};
@@ -17,7 +17,7 @@ use swc_ecma_transforms::{compat, fixer, helpers, hygiene, react, Assumptions};
 use swc_ecmascript::ast::{EsVersion, Module, Program};
 use swc_ecmascript::codegen::{text_writer::JsWriter, Config, Emitter, Node};
 use swc_ecmascript::parser::lexer::Lexer;
-use swc_ecmascript::parser::{  EsSyntax, StringInput, Syntax, TsSyntax};
+use swc_ecmascript::parser::{EsSyntax, StringInput, Syntax, TsSyntax};
 use swc_ecmascript::visit::{as_folder, Fold, FoldWith};
 
 /// Options for transpiling a module.
