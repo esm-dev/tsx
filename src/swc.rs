@@ -2,7 +2,7 @@ use crate::error::{DiagnosticBuffer, ErrorBuffer};
 use crate::hmr::{HmrOptions, HMR};
 use crate::minifier::{Minifier, MinifierOptions};
 use crate::resolver::Resolver;
-use crate::resolver_fold::ResolverFolder;
+use crate::graph::ImportAnalyzer;
 
 use base64::{engine::general_purpose, Engine as _};
 use std::{cell::RefCell, path::Path, rc::Rc};
@@ -99,12 +99,12 @@ impl SWC {
   pub fn transform(self, resolver: Rc<RefCell<Resolver>>, options: &EmitOptions) -> Result<(String, Option<String>), DiagnosticBuffer> {
     swc_common::GLOBALS.set(&Globals::new(), || {
       let unresolved_mark = Mark::new();
-      let top_level_mark = Mark::fresh(Mark::root());
-      let specifier_is_remote = resolver.borrow().specifier_is_remote;
+      let top_level_mark = Mark::new();
       let is_dev = options.is_dev.unwrap_or_default();
       let is_ts = self.specifier.ends_with(".ts") || self.specifier.ends_with(".mts") || self.specifier.ends_with(".tsx");
       let is_jsx = self.specifier.ends_with(".tsx") || self.specifier.ends_with(".jsx");
-      let react_options = if let Some(jsx_import_source) = &options.jsx_import_source {
+      let specifier_is_remote = resolver.borrow().specifier_is_remote;
+      let jsx_options = if let Some(jsx_import_source) = &options.jsx_import_source {
         let mut resolver = resolver.borrow_mut();
         let runtime = if is_dev { "/jsx-dev-runtime" } else { "/jsx-runtime" };
         let import_source = resolver.resolve(&(jsx_import_source.to_owned() + runtime), false, None);
@@ -134,7 +134,7 @@ impl SWC {
       let passes = chain!(
         swc_ecma_transforms::resolver(unresolved_mark, top_level_mark, is_ts),
         Optional::new(react::jsx_src(is_dev, self.source_map.clone()), is_jsx),
-        ResolverFolder {
+        ImportAnalyzer {
           resolver: resolver.clone(),
           mark_src_location: None,
         },
@@ -209,8 +209,8 @@ impl SWC {
             self.source_map.clone(),
             typescript::Config::default(),
             typescript::TsxConfig {
-              pragma: react_options.pragma.clone(),
-              pragma_frag: react_options.pragma_frag.clone(),
+              pragma: jsx_options.pragma.clone(),
+              pragma_frag: jsx_options.pragma_frag.clone(),
             },
             Some(&self.comments),
             top_level_mark
@@ -243,7 +243,7 @@ impl SWC {
             Some(&self.comments),
             react::Options {
               development: Some(is_dev),
-              ..react_options
+              ..jsx_options
             },
             top_level_mark,
             unresolved_mark,

@@ -6,12 +6,12 @@ use swc_common::Span;
 use swc_ecmascript::ast::*;
 use swc_ecmascript::visit::{noop_fold_type, Fold, FoldWith};
 
-pub struct ResolverFolder {
+pub struct ImportAnalyzer {
   pub resolver: Rc<RefCell<Resolver>>,
   pub mark_src_location: Option<bool>,
 }
 
-impl ResolverFolder {
+impl ImportAnalyzer {
   fn as_location(&self, span: &Span) -> Option<Span> {
     if self.mark_src_location.unwrap_or(false) {
       Some(span.clone())
@@ -21,7 +21,7 @@ impl ResolverFolder {
   }
 }
 
-impl Fold for ResolverFolder {
+impl Fold for ImportAnalyzer {
   noop_fold_type!();
 
   // resolve import/export url

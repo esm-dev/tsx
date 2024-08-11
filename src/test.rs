@@ -62,13 +62,13 @@ fn typescript() {
 
     console.log(`${toString({class: A})}`)
   "#;
-  let (code, _, _) = transform("mod.ts", source, &EmitOptions::default());
+  let (code, _, _) = transform("./test.ts", source, &EmitOptions::default());
   assert!(code.contains("var D;"));
   assert!(code.contains("enumerable(false)"));
 }
 
 #[test]
-fn module_resolver() {
+fn module_analyzer() {
   let source = r#"
     import React from "react"
     import { foo } from "~/foo.ts"
@@ -91,9 +91,9 @@ fn module_resolver() {
 }
 
 #[test]
-fn jsx_automtic() {
+fn tsx() {
   let source = r#"
-    export default function App() {
+    export default function App(props: {}) {
       return (
         <>
           <h1 className="title">Hello world!</h1>

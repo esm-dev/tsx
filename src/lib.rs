@@ -1,9 +1,9 @@
 mod css;
 mod error;
+mod graph;
 mod hmr;
 mod minifier;
 mod resolver;
-mod resolver_fold;
 mod swc;
 mod swc_helpers;
 
