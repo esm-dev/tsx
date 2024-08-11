@@ -21,7 +21,7 @@ url = "2.5.2"
 
 # lightningcss
 cssparser = "0.34.0"
-lightningcss = "1.0.0-alpha.57"
+lightningcss = "1.0.0-alpha.58"
 parcel_sourcemap = "2.1.1"
 
 # swc
