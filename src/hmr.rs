@@ -1,6 +1,6 @@
 use crate::swc_helpers::*;
 use serde::Deserialize;
-use swc_common::DUMMY_SP;
+use swc_common::{SyntaxContext, DUMMY_SP};
 use swc_ecmascript::ast::*;
 use swc_ecmascript::utils::quote_ident;
 use swc_ecmascript::visit::{noop_fold_type, Fold};
@@ -40,7 +40,7 @@ impl Fold for HMR {
       span: DUMMY_SP,
       specifiers: vec![ImportSpecifier::Default(ImportDefaultSpecifier {
         span: DUMMY_SP,
-        local: quote_ident!("__CREATE_HOT_CONTEXT__"),
+        local: quote_ident!("__CREATE_HOT_CONTEXT__").into(),
       })],
       src: Box::new(new_str(&self.options.runtime)),
       type_only: false,
@@ -59,7 +59,8 @@ impl Fold for HMR {
         ))),
         right: Box::new(Expr::Call(CallExpr {
           span: DUMMY_SP,
-          callee: Callee::Expr(Box::new(Expr::Ident(quote_ident!("__CREATE_HOT_CONTEXT__")))),
+          ctxt: SyntaxContext::empty(),
+          callee: Callee::Expr(Box::new(Expr::Ident(quote_ident!("__CREATE_HOT_CONTEXT__").into()))),
           args: vec![ExprOrSpread {
             spread: None,
             expr: Box::new(Expr::Lit(Lit::Str(new_str(&self.specifier)))),
@@ -103,14 +104,16 @@ impl Fold for HMR {
         "$RefreshReg$",
         Expr::Arrow(ArrowExpr {
           span: DUMMY_SP,
+          ctxt: SyntaxContext::empty(),
           params: vec![pat_id("type"), pat_id("id")],
           body: Box::new(BlockStmtOrExpr::Expr(Box::new(Expr::Call(CallExpr {
             span: DUMMY_SP,
+            ctxt: SyntaxContext::empty(),
             callee: Callee::Expr(Box::new(simple_member_expr("__REACT_REFRESH_RUNTIME__", "register"))),
             args: vec![
               ExprOrSpread {
                 spread: None,
-                expr: Box::new(Expr::Ident(quote_ident!("type"))),
+                expr: Box::new(Expr::Ident(quote_ident!("type").into())),
               },
               ExprOrSpread {
                 spread: None,
@@ -123,7 +126,7 @@ impl Fold for HMR {
                     left: Box::new(Expr::Lit(Lit::Str(new_str(&self.specifier)))),
                     right: Box::new(Expr::Lit(Lit::Str(new_str(" ")))),
                   })),
-                  right: Box::new(Expr::Ident(quote_ident!("id"))),
+                  right: Box::new(Expr::Ident(quote_ident!("id").into())),
                 })),
               },
             ],
@@ -148,21 +151,22 @@ impl Fold for HMR {
 
     if react_refresh {
       // window.$RefreshReg$ = prevRefreshReg
-      items.push(window_assign("$RefreshReg$", Expr::Ident(quote_ident!("prevRefreshReg"))));
+      items.push(window_assign("$RefreshReg$", Expr::Ident(quote_ident!("prevRefreshReg").into())));
       // window.$RefreshSig$ = prevRefreshSig
-      items.push(window_assign("$RefreshSig$", Expr::Ident(quote_ident!("prevRefreshSig"))));
+      items.push(window_assign("$RefreshSig$", Expr::Ident(quote_ident!("prevRefreshSig").into())));
       // import.meta.hot.accept(__REACT_REFRESH__)
       items.push(ModuleItem::Stmt(Stmt::Expr(ExprStmt {
         span: DUMMY_SP,
         expr: Box::new(Expr::Call(CallExpr {
           span: DUMMY_SP,
+          ctxt: SyntaxContext::empty(),
           callee: Callee::Expr(Box::new(Expr::Member(new_member_expr(
             Expr::Member(new_member_expr(simple_member_expr("import", "meta"), "hot")),
             "accept",
           )))),
           args: vec![ExprOrSpread {
             spread: None,
-            expr: Box::new(Expr::Ident(quote_ident!("__REACT_REFRESH__"))),
+            expr: Box::new(Expr::Ident(quote_ident!("__REACT_REFRESH__").into())),
           }],
           type_args: None,
         })),

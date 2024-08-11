@@ -5,10 +5,13 @@ use crate::minifier::{Minifier, MinifierOptions};
 use crate::resolver::Resolver;
 
 use base64::{engine::general_purpose, Engine as _};
-use std::{cell::RefCell, path::Path, rc::Rc};
+use std::cell::RefCell;
+use std::path::Path;
+use std::rc::Rc;
 use swc_common::comments::SingleThreadedComments;
 use swc_common::errors::{Handler, HandlerFlags};
 use swc_common::{chain, FileName, Globals, Mark, SourceMap};
+use swc_ecma_transforms::fixer::paren_remover;
 use swc_ecma_transforms::optimization::simplify::dce;
 use swc_ecma_transforms::pass::Optional;
 use swc_ecma_transforms::proposals::decorators;
@@ -62,8 +65,7 @@ impl SWC {
   /// Parse the source code of a JS/TS module into an AST.
   pub fn parse(specifier: &str, source: &str, lang: Option<String>) -> Result<Self, DiagnosticBuffer> {
     let source_map = SourceMap::default();
-    let source_file = source_map.new_source_file(FileName::Real(Path::new(specifier).to_path_buf()), source.into());
-    let sm = &source_map;
+    let source_file = source_map.new_source_file(FileName::Real(Path::new(specifier).to_path_buf()).into(), source.into());
     let error_buffer = ErrorBuffer::new(specifier);
     let syntax = get_syntax(specifier, lang);
     let input = StringInput::from(&*source_file);
@@ -78,6 +80,7 @@ impl SWC {
         ..HandlerFlags::default()
       },
     );
+    let sm = &source_map;
     let module = parser
       .parse_module()
       .map_err(move |err| {
@@ -105,69 +108,44 @@ impl SWC {
       let is_jsx = self.specifier.ends_with(".tsx") || self.specifier.ends_with(".jsx");
       let specifier_is_remote = resolver.borrow().specifier_is_remote;
       let jsx_options = if let Some(jsx_import_source) = &options.jsx_import_source {
-        let mut resolver = resolver.borrow_mut();
-        let runtime = if is_dev { "/jsx-dev-runtime" } else { "/jsx-runtime" };
-        let import_source = resolver.resolve(&(jsx_import_source.to_owned() + runtime), false, None);
-        let import_source = import_source
-          .split("?")
-          .next()
-          .unwrap_or(&import_source)
-          .strip_suffix(runtime)
-          .unwrap_or(&import_source)
-          .to_string();
-        if !is_jsx {
-          resolver.deps.pop();
-        }
         react::Options {
           runtime: Some(react::Runtime::Automatic),
-          import_source: Some(import_source),
+          import_source: Some(jsx_import_source.to_owned()),
+          development: Some(is_dev),
           ..Default::default()
         }
       } else {
         react::Options {
           pragma: options.jsx_pragma.clone(),
           pragma_frag: options.jsx_pragma_frag.clone(),
+          development: Some(is_dev),
           ..Default::default()
         }
       };
       let assumptions = Assumptions::all();
-      let passes = chain!(
-        swc_ecma_transforms::resolver(unresolved_mark, top_level_mark, is_ts),
-        Optional::new(react::jsx_src(is_dev, self.source_map.clone()), is_jsx),
-        ImportAnalyzer {
-          resolver: resolver.clone(),
-          mark_src_location: None,
-        },
-        decorators::decorators(decorators::Config {
-          legacy: true,
-          emit_metadata: false,
-          use_define_for_class_fields: false,
-        }),
-        Optional::new(compat::es2016(), options.target < EsVersion::Es2016),
+      let compat_pass = chain!(
         Optional::new(
-          compat::es2017(
-            compat::es2017::Config {
-              async_to_generator: compat::es2017::async_to_generator::Config {
-                ignore_function_name: assumptions.ignore_function_name,
-                ignore_function_length: assumptions.ignore_function_length
+          compat::class_fields_use_set::class_fields_use_set(assumptions.pure_getters),
+          assumptions.set_public_class_fields,
+        ),
+        Optional::new(
+          compat::es2022::es2022(
+            Some(&self.comments),
+            compat::es2022::Config {
+              class_properties: compat::es2022::class_properties::Config {
+                private_as_properties: assumptions.private_fields_as_properties,
+                constant_super: assumptions.constant_super,
+                set_public_fields: assumptions.set_public_class_fields,
+                no_document_all: assumptions.no_document_all,
+                static_blocks_mark: Mark::new(),
+                pure_getter: assumptions.pure_getters,
               }
             },
-            Some(&self.comments),
-            unresolved_mark,
+            unresolved_mark
           ),
-          options.target < EsVersion::Es2017
+          options.target < EsVersion::Es2022
         ),
-        Optional::new(
-          compat::es2018(compat::es2018::Config {
-            object_rest_spread: compat::es2018::object_rest_spread::Config {
-              no_symbol: assumptions.object_rest_no_symbols,
-              set_property: assumptions.set_spread_properties,
-              pure_getters: assumptions.pure_getters,
-            }
-          }),
-          options.target < EsVersion::Es2018
-        ),
-        Optional::new(compat::es2019::es2019(), options.target < EsVersion::Es2019),
+        Optional::new(compat::es2021::es2021(), options.target < EsVersion::Es2021),
         Optional::new(
           compat::es2020::es2020(
             compat::es2020::Config {
@@ -183,27 +161,41 @@ impl SWC {
           ),
           options.target < EsVersion::Es2020
         ),
-        Optional::new(compat::es2021::es2021(), options.target < EsVersion::Es2021),
+        Optional::new(compat::es2019::es2019(), options.target < EsVersion::Es2019),
         Optional::new(
-          compat::es2022::es2022(
-            Some(&self.comments),
-            compat::es2022::Config {
-              class_properties: compat::es2022::class_properties::Config {
-                private_as_properties: assumptions.private_fields_as_properties,
-                constant_super: assumptions.constant_super,
-                set_public_fields: assumptions.set_public_class_fields,
-                no_document_all: assumptions.no_document_all,
-                pure_getter: assumptions.pure_getters,
-                static_blocks_mark: Mark::new(),
-              }
+          compat::es2018(compat::es2018::Config {
+            object_rest_spread: compat::es2018::object_rest_spread::Config {
+              no_symbol: assumptions.object_rest_no_symbols,
+              set_property: assumptions.set_spread_properties,
+              pure_getters: assumptions.pure_getters
+            }
+          }),
+          options.target < EsVersion::Es2018,
+        ),
+        Optional::new(
+          compat::es2017(
+            compat::es2017::Config {
+              async_to_generator: compat::es2017::async_to_generator::Config {
+                ignore_function_name: assumptions.ignore_function_name,
+                ignore_function_length: assumptions.ignore_function_length
+              },
             },
+            Some(&self.comments),
             unresolved_mark
           ),
-          options.target < EsVersion::Es2022
+          options.target < EsVersion::Es2017
         ),
-        compat::reserved_words::reserved_words(),
-        helpers::inject_helpers(top_level_mark),
-        Optional::new(typescript::strip(top_level_mark), is_ts && !is_jsx),
+        Optional::new(compat::es2016(), options.target < EsVersion::Es2016),
+      );
+      let visitor = chain!(
+        swc_ecma_transforms::resolver(unresolved_mark, top_level_mark, is_ts),
+        // todo: support the new decorators proposal
+        decorators::decorators(decorators::Config {
+          legacy: true,
+          emit_metadata: false,
+          use_define_for_class_fields: false,
+        }),
+        Optional::new(typescript::strip(unresolved_mark, top_level_mark), is_ts && !is_jsx),
         Optional::new(
           tsx(
             self.source_map.clone(),
@@ -213,9 +205,24 @@ impl SWC {
               pragma_frag: jsx_options.pragma_frag.clone(),
             },
             Some(&self.comments),
+            unresolved_mark,
             top_level_mark
           ),
           is_ts && is_jsx
+        ),
+        Optional::new(react::jsx_src(is_dev, self.source_map.clone()), is_jsx),
+        Optional::new(
+          react::jsx(
+            self.source_map.clone(),
+            Some(&self.comments),
+            react::Options {
+              development: Some(is_dev),
+              ..jsx_options
+            },
+            top_level_mark,
+            unresolved_mark,
+          ),
+          is_jsx
         ),
         Optional::new(
           react::refresh(
@@ -237,19 +244,12 @@ impl SWC {
             .unwrap_or_default()
             && !specifier_is_remote
         ),
-        Optional::new(
-          react::jsx(
-            self.source_map.clone(),
-            Some(&self.comments),
-            react::Options {
-              development: Some(is_dev),
-              ..jsx_options
-            },
-            top_level_mark,
-            unresolved_mark,
-          ),
-          is_jsx
-        ),
+        Optional::new(paren_remover(Some(&self.comments)), options.minify.is_some()),
+        compat_pass,
+        ImportAnalyzer {
+          resolver: resolver.clone(),
+          mark_src_location: None,
+        },
         Optional::new(
           HMR {
             specifier: self.specifier.clone(),
@@ -257,6 +257,8 @@ impl SWC {
           },
           options.hmr.is_some() && !specifier_is_remote
         ),
+        compat::reserved_words::reserved_words(),
+        helpers::inject_helpers(top_level_mark),
         Optional::new(
           dce::dce(Default::default(), unresolved_mark),
           options.tree_shaking.unwrap_or_default()
@@ -272,7 +274,7 @@ impl SWC {
           options.minify.is_some()
         ),
         hygiene::hygiene_with_config(hygiene::Config {
-          keep_class_names: true,
+          keep_class_names: options.minify.unwrap_or_default().keep_names.unwrap_or_default(),
           top_level_mark,
           ..Default::default()
         }),
@@ -280,7 +282,7 @@ impl SWC {
       );
 
       // emit code
-      let (mut code, map) = self.emit(passes, options);
+      let (mut code, map) = self.emit(visitor, options);
 
       // resolve jsx runtime path defined by `// @jsxImportSource` annotation
       let mut jsx_runtime = None;
@@ -299,11 +301,11 @@ impl SWC {
     })
   }
 
-  /// Emit code with a given set of passes.
-  fn emit<T: Fold>(&self, mut passes: T, options: &EmitOptions) -> (String, Option<String>) {
+  /// Emit code with a given set of visitor.
+  fn emit<T: Fold>(&self, mut visitor: T, options: &EmitOptions) -> (String, Option<String>) {
     let eol = "\n";
     let program = Program::Module(self.module.clone());
-    let program = helpers::HELPERS.set(&helpers::Helpers::new(false), || program.fold_with(&mut passes));
+    let program = helpers::HELPERS.set(&helpers::Helpers::new(false), || program.fold_with(&mut visitor));
     let mut js_buf = Vec::new();
     let mut map_buf = Vec::new();
     let writer = if options.source_map.is_some() {
