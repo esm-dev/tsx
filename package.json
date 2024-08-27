@@ -1,6 +1,6 @@
 {
   "name": "esm-compiler",
-  "version": "0.7.1",
+  "version": "0.7.2",
   "description": "A tsx compiler for esm.sh playground powered by SWC.",
   "type": "module",
   "module": "./pkg/esm_compiler.js",
