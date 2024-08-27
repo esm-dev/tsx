@@ -2,7 +2,7 @@ import { readFile, writeFile } from "node:fs/promises";
 import { spawn } from "node:child_process";
 
 async function build() {
-  const p = spawn("wasm-pack", ["build", "--target", "web"]);
+  const p = spawn("wasm-pack", ["build", "--target", "web", "--no-pack", "--release"]);
   p.stdout.pipe(process.stdout);
   p.stderr.pipe(process.stderr);
   await new Promise((resolve, reject) => {
