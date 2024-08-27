@@ -5,8 +5,7 @@ A tsx compiler for esm.sh playground written in Rust, powered by [swc](https://s
 ## Usage
 
 ```js
-import { init, transform } from "https://esm.sh/esm-compiler";
-
+import init, { transform } from "https://esm.sh/esm-compiler";
 await init("https://esm.sh/esm-compiler/pkg/esm_compiler_bg.wasm");
 
 const sourceCode = `
@@ -17,16 +16,13 @@ export default App() {
   return <h1>Hello {msg}!</h1>
 }
 `
-
 const importMap = {
   imports: {
     "@jsxImportSource": "https://esm.sh/react@18.3.1"
     "react": "https://esm.sh/react@18.3.1",
   }
 }
-
 const ret = transform("./App.tsx", sourceCode, { importMap })
-
 console.log(ret.code)
 ```
 
