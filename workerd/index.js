@@ -3,5 +3,5 @@ import wasm from "../pkg/esm_compiler_bg.wasm";
 
 initSync(wasm);
 
-export function init() {}
+export default function init() {}
 export { transform };
