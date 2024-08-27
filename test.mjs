@@ -1,35 +1,11 @@
-import init, { transform, transformCSS } from "../pkg/esm_compiler.js";
+import { readFile } from "node:fs/promises";
+import init, { transform } from "./pkg/esm_compiler.js";
 
 export const test = async () => {
-  const wasmData = await Deno.readFile(
-    new URL("../pkg/esm_compiler_bg.wasm", import.meta.url),
+  const wasmData = await readFile(
+    new URL("./pkg/esm_compiler_bg.wasm", import.meta.url),
   );
   await init(wasmData);
-
-  // test css transform with css modules and nesting draft
-  {
-    const source = `
-      .foo {
-        color: red;
-
-        &.bar {
-          color: green
-        }
-      }
-    `;
-    const { exports, code } = transformCSS("source.module.css", source, {
-      cssModules: true,
-      targets: {
-        chrome: 95 << 16,
-      },
-    });
-    if (exports.size !== 2) {
-      throw new Error("css modules should be enabled");
-    }
-    if (code.includes(".foo.bar{")) {
-      throw new Error("css nesting should be downgraded");
-    }
-  }
 
   // test jsx transform
   {
@@ -39,7 +15,7 @@ export const test = async () => {
       renderToString(<p>{msg}</p>)
     `;
     const { deps, code } = transform("source.tsx", source, {
-      importMap:  {
+      importMap: {
         "imports": {
           "@jsxImportSource": "https://esm.sh/react@18",
           "react-dom/server": "https://esm.sh/react-dom@18/server",
@@ -63,6 +39,6 @@ export const test = async () => {
   console.log("%c✔ test passed", "color: green;");
 };
 
-if (import.meta.main) {
+if (process.argv[1] === new URL(import.meta.url).pathname) {
   await test();
 }

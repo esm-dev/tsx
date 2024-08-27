@@ -1,7 +1,7 @@
 # ESM Compiler
 
 The compiler for esm.sh playground written in Rust, powered by
-[swc](https://swc.rs) and [lightningcss](https://lightningcss.dev/).
+[swc](https://swc.rs).
 
 ## Usage
 

@@ -1,5 +1,5 @@
 import { WorkerEntrypoint } from "cloudflare:workers";
-import { initSync, transform, transformCSS } from "../pkg/esm_compiler.js";
+import { initSync, transform } from "../pkg/esm_compiler.js";
 import wasm from "../pkg/esm_compiler_bg.wasm";
 import indexHtml from "./index.html";
 
@@ -15,9 +15,6 @@ export default class EsmCompiler extends WorkerEntrypoint {
     }
     try {
       const { filename, code, ...options } = validateInput(await req.json());
-      if (filename.endsWith(".css") || options.lang === "css") {
-        return Response.json(transformCSS(filename, code, options));
-      }
       return Response.json(transform(filename, code, options));
     } catch (err) {
       return Response.json({ error: { message: err.message } }, { status: err.cause === errInvalidInput ? 400 : 500 });
@@ -26,10 +23,6 @@ export default class EsmCompiler extends WorkerEntrypoint {
   async transform(input) {
     const { filename, code, ...options } = validateInput(input);
     return transform(filename, code, options);
-  }
-  async transformCSS(input) {
-    const { filename, code, ...options } = validateInput(input);
-    return transformCSS(filename, code, options);
   }
 }
 

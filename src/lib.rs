@@ -1,4 +1,3 @@
-mod css;
 mod error;
 mod graph;
 mod hmr;
@@ -158,11 +157,4 @@ pub fn transform(specifier: &str, source: &str, swc_transform_options: JsValue) 
     })
     .unwrap(),
   )
-}
-
-#[wasm_bindgen(js_name = "transformCSS")]
-pub fn transform_css(filename: &str, source: &str, lightningcss_transform_options: JsValue) -> Result<JsValue, JsError> {
-  let css_config: css::TransformOptions = serde_wasm_bindgen::from_value(lightningcss_transform_options).unwrap();
-  let res = css::compile(filename.into(), source, &css_config)?;
-  Ok(serde_wasm_bindgen::to_value(&res).unwrap())
 }

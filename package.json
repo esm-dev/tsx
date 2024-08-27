@@ -1,26 +1,15 @@
 {
   "name": "esm-compiler",
-  "version": "0.6.2",
-  "description": "The compiler for esm.sh playground written in Rust.",
+  "version": "0.7.0",
+  "description": "The compiler for esm.sh playground powered by SWC.",
   "type": "module",
   "module": "./pkg/esm_compiler.js",
   "types": "./pkg/esm_compiler.d.ts",
   "exports": {
     ".": {
+      "workerd": "./workerd/index.js",
       "import": "./pkg/esm_compiler.js",
       "types": "./pkg/esm_compiler.d.ts"
-    },
-    "./swc": {
-      "import": "./js/swc.js",
-      "types": "./types/swc.d.ts"
-    },
-    "./lightningcss": {
-      "import": "./js/lightningcss.js",
-      "types": "./types/lightningcss.d.ts"
-    },
-    "./workerd": {
-      "import": "./js/workerd.js",
-      "types": "./types/workerd.d.ts"
     }
   },
   "sideEffects": false,
@@ -32,9 +21,10 @@
     "./pkg/esm_compiler.d.ts"
   ],
   "scripts": {
-    "build": "wasm-pack build --target web",
-    "test": "pnpm build && deno run -A js/test.js",
-    "deploy": "pnpm build && npx -y wrangler@3 deploy --name esm-compiler --compatibility-date 2024-04-06 js/workerd.js"
+    "prepublishOnly": "pnpm build",
+    "build": "node build.mjs",
+    "test": "cargo test --all",
+    "deploy": "pnpm build && npx -y wrangler@3 deploy --name esm-compiler --compatibility-date 2024-08-01 workerd/worker.js"
   },
   "repository": {
     "type": "git",
