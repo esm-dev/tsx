@@ -2,14 +2,6 @@ import { readFile, writeFile } from "node:fs/promises";
 import { spawn } from "node:child_process";
 
 async function build() {
-  const pkgJson = JSON.parse(await readFile("./package.json", "utf8"));
-  const cargoToml = await readFile("./Cargo.toml", "utf8");
-  await writeFile(
-    "./Cargo.toml",
-    cargoToml.replace(/version = "[\d\.]+"/, `version = "${pkgJson.version}"`),
-    "utf8",
-  );
-
   const p = spawn("wasm-pack", ["build", "--target", "web"]);
   p.stdout.pipe(process.stdout);
   p.stderr.pipe(process.stderr);

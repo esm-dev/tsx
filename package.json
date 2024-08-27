@@ -1,7 +1,7 @@
 {
   "name": "esm-compiler",
-  "version": "0.7.0",
-  "description": "The compiler for esm.sh playground powered by SWC.",
+  "version": "0.7.1",
+  "description": "A tsx compiler for esm.sh playground powered by SWC.",
   "type": "module",
   "module": "./pkg/esm_compiler.js",
   "types": "./pkg/esm_compiler.d.ts",
@@ -14,17 +14,17 @@
   },
   "sideEffects": false,
   "files": [
-    "./types/",
-    "./js/",
+    "./types/swc.d.ts",
     "./pkg/esm_compiler_bg.wasm",
     "./pkg/esm_compiler.js",
-    "./pkg/esm_compiler.d.ts"
+    "./pkg/esm_compiler.d.ts",
+    "./workerd/index.js"
   ],
   "scripts": {
-    "prepublishOnly": "pnpm build",
+    "prepublishOnly": "node build.mjs",
     "build": "node build.mjs",
     "test": "cargo test --all",
-    "deploy": "pnpm build && npx -y wrangler@3 deploy --name esm-compiler --compatibility-date 2024-08-01 workerd/worker.js"
+    "deploy": "node build.mjs && npx -y wrangler@3 deploy --name esm-compiler --compatibility-date 2024-08-01 workerd/worker.js"
   },
   "repository": {
     "type": "git",
