@@ -1,14 +1,15 @@
 # ESM Compiler
 
-A tsx compiler for esm.sh playground written in Rust, powered by [swc](https://swc.rs).
+The compiler for esm.sh playground written in Rust, powered by
+[swc](https://swc.rs) and [lightningcss](https://lightningcss.dev/).
 
 ## Usage
 
 ```js
 import init, { transform } from "https://esm.sh/esm-compiler";
-await init("https://esm.sh/esm-compiler/pkg/esm_compiler_bg.wasm");
+await init();
 
-const sourceCode = `
+const tsx = `
 import { useState } from "react"
 
 export default App() {
@@ -22,7 +23,7 @@ const importMap = {
     "react": "https://esm.sh/react@18.3.1",
   }
 }
-const ret = transform("./App.tsx", sourceCode, { importMap })
+const ret = transform("./App.tsx", tsx, { importMap })
 console.log(ret.code)
 ```
 

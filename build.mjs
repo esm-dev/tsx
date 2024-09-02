@@ -23,9 +23,13 @@ async function build() {
     "./pkg/esm_compiler.d.ts",
     [
       `import { SWCTransformOptions, SWCTransformResult } from "../types/swc.d.ts";`,
+      `import { LightningCSSTransformOptions, LightningCSSTransformResult } from "../types/lightningcss.d.ts";`,
       dts.replace(
         `swc_transform_options: any): any`,
         `swc_transform_options: SWCTransformOptions): SWCTransformResult`,
+      ).replace(
+        `lightningcss_transform_options: any): any`,
+        `lightningcss_transform_options: LightningCSSTransformOptions): LightningCSSTransformResult`,
       ),
     ].join("\n"),
     "utf8",

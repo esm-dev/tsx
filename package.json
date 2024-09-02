@@ -1,30 +1,39 @@
 {
   "name": "esm-compiler",
   "version": "0.7.2",
-  "description": "A tsx compiler for esm.sh playground powered by SWC.",
+  "description": "The compiler for esm.sh playground written in Rust.",
   "type": "module",
   "module": "./pkg/esm_compiler.js",
   "types": "./pkg/esm_compiler.d.ts",
   "exports": {
     ".": {
-      "workerd": "./workerd/index.js",
+      "workerd": "./workerd/index.mjs",
       "import": "./pkg/esm_compiler.js",
       "types": "./pkg/esm_compiler.d.ts"
+    },
+    "./swc": {
+      "import": "./swc.mjs",
+      "types": "./types/swc.d.ts"
+    },
+    "./lightningcss": {
+      "import": "./lightningcss.mjs",
+      "types": "./types/lightningcss.d.ts"
     }
   },
   "sideEffects": false,
   "files": [
-    "./types/swc.d.ts",
+    "./types/",
+    "./js/",
+    "./workerd/index.mjs",
     "./pkg/esm_compiler_bg.wasm",
     "./pkg/esm_compiler.js",
-    "./pkg/esm_compiler.d.ts",
-    "./workerd/index.js"
+    "./pkg/esm_compiler.d.ts"
   ],
   "scripts": {
     "prepublishOnly": "node build.mjs",
     "build": "node build.mjs",
     "test": "cargo test --all",
-    "deploy": "node build.mjs && npx -y wrangler@3 deploy --name esm-compiler --compatibility-date 2024-08-01 workerd/worker.js"
+    "deploy": "node build.mjs && npx -y wrangler@3 deploy --name esm-compiler --compatibility-date 2024-08-01 workerd/worker.mjs"
   },
   "repository": {
     "type": "git",

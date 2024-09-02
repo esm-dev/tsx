@@ -1,7 +1,8 @@
 import { WorkerEntrypoint } from "cloudflare:workers";
-import { initSync, transform } from "../pkg/esm_compiler.js";
+import { initSync, transform, transformCSS } from "../pkg/esm_compiler.js";
 import wasm from "../pkg/esm_compiler_bg.wasm";
 import indexHtml from "./index.html";
+initSync(wasm);
 
 const MB = 1024 * 1024;
 const errInvalidInput = new Error("invalid input");
@@ -15,6 +16,9 @@ export default class EsmCompiler extends WorkerEntrypoint {
     }
     try {
       const { filename, code, ...options } = validateInput(await req.json());
+      if (filename.endsWith(".css") || options.lang === "css") {
+        return Response.json(transformCSS(filename, code, options));
+      }
       return Response.json(transform(filename, code, options));
     } catch (err) {
       return Response.json({ error: { message: err.message } }, { status: err.cause === errInvalidInput ? 400 : 500 });
@@ -24,13 +28,17 @@ export default class EsmCompiler extends WorkerEntrypoint {
     const { filename, code, ...options } = validateInput(input);
     return transform(filename, code, options);
   }
+  async transformCSS(input) {
+    const { filename, code, ...options } = validateInput(input);
+    return transformCSS(filename, code, options);
+  }
 }
 
 function validateInput(input) {
   if (typeof input !== "object" || input === null) {
     throw new Error("input must be an object", { cause: errInvalidInput });
   }
-  if (typeof input.filename !== "string" || input.filename.length === 0) {
+  if (typeof input.filename !== "string" || input.filename === "") {
     throw new Error("filename is required", { cause: errInvalidInput });
   }
   if (typeof input.code !== "string") {
@@ -49,4 +57,3 @@ function validateInput(input) {
   return input;
 }
 
-initSync(wasm);
