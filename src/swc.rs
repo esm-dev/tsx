@@ -1,7 +1,7 @@
 use crate::error::{DiagnosticBuffer, ErrorBuffer};
 use crate::graph::ImportAnalyzer;
 use crate::hmr::{HmrOptions, HMR};
-use crate::minifier::{Minifier, MinifierOptions};
+use crate::minifier::Minifier;
 use crate::resolver::Resolver;
 
 use base64::{engine::general_purpose, Engine as _};
@@ -30,10 +30,9 @@ pub struct EmitOptions {
   pub is_dev: bool,
   pub hmr: Option<HmrOptions>,
   pub target: EsVersion,
-  pub jsx_pragma: Option<String>,
-  pub jsx_pragma_frag: Option<String>,
   pub jsx_import_source: Option<String>,
-  pub minify: Option<MinifierOptions>,
+  pub minify: bool,
+  pub keep_names: bool,
   pub tree_shaking: bool,
 }
 
@@ -44,10 +43,9 @@ impl Default for EmitOptions {
       is_dev: false,
       hmr: None,
       target: EsVersion::Es2022,
-      jsx_pragma: None,
-      jsx_pragma_frag: None,
       jsx_import_source: None,
-      minify: None,
+      minify: false,
+      keep_names: false,
       tree_shaking: false,
     }
   }
@@ -115,8 +113,6 @@ impl SWC {
         }
       } else {
         react::Options {
-          pragma: options.jsx_pragma.clone(),
-          pragma_frag: options.jsx_pragma_frag.clone(),
           development: Some(options.is_dev),
           ..Default::default()
         }
@@ -243,7 +239,7 @@ impl SWC {
             .unwrap_or_default()
             && !specifier_is_remote
         ),
-        Optional::new(paren_remover(Some(&self.comments)), options.minify.is_some()),
+        Optional::new(paren_remover(Some(&self.comments)), options.minify),
         compat_pass,
         ImportAnalyzer {
           resolver: resolver.clone(),
@@ -258,22 +254,19 @@ impl SWC {
         ),
         compat::reserved_words::reserved_words(),
         helpers::inject_helpers(top_level_mark),
-        Optional::new(
-          dce::dce(Default::default(), unresolved_mark),
-          options.tree_shaking
-        ),
+        Optional::new(dce::dce(Default::default(), unresolved_mark), options.tree_shaking),
         Optional::new(
           as_folder(Minifier {
             cm: self.source_map.clone(),
             comments: Some(self.comments.clone()),
             unresolved_mark,
             top_level_mark,
-            options: options.minify.unwrap_or_default(),
+            keep_names: options.keep_names,
           }),
-          options.minify.is_some()
+          options.minify
         ),
         hygiene::hygiene_with_config(hygiene::Config {
-          keep_class_names: options.minify.unwrap_or_default().keep_names.unwrap_or_default(),
+          keep_class_names: options.keep_names,
           top_level_mark,
           ..Default::default()
         }),
@@ -313,7 +306,7 @@ impl SWC {
       JsWriter::new(self.source_map.clone(), eol, &mut js_buf, None)
     };
     let mut emitter = Emitter {
-      cfg: Config::default().with_target(options.target).with_minify(options.minify.is_some()),
+      cfg: Config::default().with_target(options.target).with_minify(options.minify),
       comments: Some(&self.comments),
       cm: self.source_map.clone(),
       wr: writer,

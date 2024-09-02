@@ -9,11 +9,6 @@ export interface ImportMap {
   scopes?: Record<string, Record<string, string>>;
 }
 
-export interface MinifierOptions {
-  compress?: boolean;
-  keepNames?: boolean;
-}
-
 export interface SWCTransformOptions {
   lang?: "ts" | "tsx" | "js" | "jsx";
   sourceMap?: "inline" | "external";
@@ -29,10 +24,9 @@ export interface SWCTransformOptions {
     | "es2020"
     | "es2021"
     | "es2022";
-  jsxFactory?: string;
-  jsxFragmentFactory?: string;
   jsxImportSource?: string;
-  minify?: boolean | MinifierOptions;
+  minify?: boolean;
+  keepNames?: boolean;
   treeShaking?: boolean;
   versionMap?: Record<string, string>;
   globalVersion?: string;

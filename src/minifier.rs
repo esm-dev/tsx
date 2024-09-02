@@ -1,4 +1,3 @@
-use serde::Deserialize;
 use swc_common::comments::{Comments, SingleThreadedComments};
 use swc_common::sync::Lrc;
 use swc_common::util::take::Take;
@@ -13,30 +12,13 @@ pub struct Minifier {
   pub comments: Option<SingleThreadedComments>,
   pub unresolved_mark: Mark,
   pub top_level_mark: Mark,
-  pub options: MinifierOptions,
-}
-
-#[derive(Deserialize, Clone, Copy)]
-#[serde(rename_all = "camelCase")]
-pub struct MinifierOptions {
-  pub compress: Option<bool>,
-  pub keep_names: Option<bool>,
-}
-
-impl Default for MinifierOptions {
-  fn default() -> Self {
-    MinifierOptions {
-      compress: Some(true),
-      keep_names: Some(false),
-    }
-  }
+  pub keep_names: bool,
 }
 
 impl VisitMut for Minifier {
   noop_visit_mut_type!();
 
   fn visit_mut_module(&mut self, m: &mut Module) {
-    let keek_names = self.options.keep_names.unwrap_or_default();
     m.map_with_mut(|m| {
       optimize(
         m.into(),
@@ -44,16 +26,12 @@ impl VisitMut for Minifier {
         self.comments.as_ref().map(|v| v as &dyn Comments),
         None,
         &MinifyOptions {
-          compress: if self.options.compress.unwrap_or_default() {
-            Some(Default::default())
-          } else {
-            None
-          },
+          compress: Some(Default::default()),
           mangle: Some(MangleOptions {
             top_level: Some(true),
-            keep_class_names: keek_names,
-            keep_fn_names: keek_names,
-            keep_private_props: keek_names,
+            keep_class_names: self.keep_names,
+            keep_fn_names: self.keep_names,
+            keep_private_props: self.keep_names,
             ..Default::default()
           }),
           ..Default::default()

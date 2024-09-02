@@ -11,7 +11,6 @@ mod swc_helpers;
 mod test;
 
 use hmr::HmrOptions;
-use minifier::MinifierOptions;
 use resolver::{is_http_url, DependencyDescriptor, Resolver};
 use serde::{Deserialize, Serialize};
 use std::cell::RefCell;
@@ -24,13 +23,6 @@ use url::Url;
 use wasm_bindgen::prelude::*;
 
 #[derive(Deserialize)]
-#[serde(untagged)]
-pub enum Minify {
-  Bool(bool),
-  Options(MinifierOptions),
-}
-
-#[derive(Deserialize)]
 #[serde(deny_unknown_fields, rename_all = "camelCase")]
 pub struct SWCTransformOptions {
   pub lang: Option<String>,
@@ -39,10 +31,9 @@ pub struct SWCTransformOptions {
   pub is_dev: Option<bool>,
   pub hmr: Option<HmrOptions>,
   pub target: Option<String>,
-  pub jsx_factory: Option<String>,
-  pub jsx_fragment_factory: Option<String>,
   pub jsx_import_source: Option<String>,
-  pub minify: Option<Minify>,
+  pub minify: Option<bool>,
+  pub keep_names: Option<bool>,
   pub tree_shaking: Option<bool>,
   pub global_version: Option<String>,
   pub version_map: Option<HashMap<String, String>>,
@@ -100,33 +91,15 @@ pub fn transform(specifier: &str, source: &str, swc_transform_options: JsValue) 
     Some(jsx_import_source)
   } else if let Some(importmap) = importmap {
     // check `@jsxImportSource` in the import map
-    if options.jsx_factory.is_none() && options.jsx_fragment_factory.is_none() {
-      let referrer = if is_http_url(specifier) {
-        Url::from_str(specifier).unwrap()
-      } else {
-        Url::from_str(&("file://".to_owned() + specifier.trim_start_matches('.'))).unwrap()
-      };
-      if let Ok(resolved) = importmap.resolve("@jsxImportSource", &referrer) {
-        Some(resolved.to_string())
-      } else {
-        None
-      }
+    let referrer = if is_http_url(specifier) {
+      Url::from_str(specifier).unwrap()
+    } else {
+      Url::from_str(&("file://".to_owned() + specifier.trim_start_matches('.'))).unwrap()
+    };
+    if let Ok(resolved) = importmap.resolve("@jsxImportSource", &referrer) {
+      Some(resolved.to_string())
     } else {
       None
-    }
-  } else {
-    None
-  };
-  let minify = if let Some(minify) = options.minify {
-    match minify {
-      Minify::Bool(minify) => {
-        if minify {
-          Some(Default::default())
-        } else {
-          None
-        }
-      }
-      Minify::Options(options) => Some(options),
     }
   } else {
     None
@@ -137,9 +110,8 @@ pub fn transform(specifier: &str, source: &str, swc_transform_options: JsValue) 
     hmr: options.hmr,
     target,
     jsx_import_source,
-    jsx_pragma: options.jsx_factory,
-    jsx_pragma_frag: options.jsx_fragment_factory,
-    minify,
+    minify: options.minify.unwrap_or_default(),
+    keep_names: options.keep_names.unwrap_or_default(),
     tree_shaking: options.tree_shaking.unwrap_or_default(),
   };
   let (code, map) = match module.transform(resolver.clone(), &emit_options) {
