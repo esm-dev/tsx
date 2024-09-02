@@ -2,7 +2,6 @@ import { WorkerEntrypoint } from "cloudflare:workers";
 import { initSync, transform, transformCSS } from "../pkg/esm_compiler.js";
 import wasm from "../pkg/esm_compiler_bg.wasm";
 import indexHtml from "./index.html";
-initSync(wasm);
 
 const MB = 1024 * 1024;
 const errInvalidInput = new Error("invalid input");
@@ -34,26 +33,29 @@ export default class EsmCompiler extends WorkerEntrypoint {
   }
 }
 
+function isObject(v) {
+  return v !== null && typeof v === "object" && !Array.isArray(v);
+}
+
 function validateInput(input) {
-  if (typeof input !== "object" || input === null) {
+  if (!isObject(input)) {
     throw new Error("input must be an object", { cause: errInvalidInput });
   }
-  if (typeof input.filename !== "string" || input.filename === "") {
+  const { filename, code, importMap } = input;
+  if (typeof filename !== "string" || filename === "") {
     throw new Error("filename is required", { cause: errInvalidInput });
   }
-  if (typeof input.code !== "string") {
+  if (typeof code !== "string") {
     throw new Error("code is required", { cause: errInvalidInput });
   }
-  if (input.code.length > 10 * MB) { // limit source code size to 10MB
+  // limit input source code size to 10MB
+  if (code.length > 10 * MB) {
     throw new Error("code is too large", { cause: errInvalidInput });
   }
-  if (input.importMap) {
-    if (typeof input.importMap === "object" && !Array.isArray(input.importMap)) {
-      input.importMap = JSON.stringify(input.importMap);
-    } else if (typeof input.importMap !== "string") {
-      throw new Error("importMap should be an object or a string", { cause: errInvalidInput });
-    }
+  if (importMap !== undefined && !isObject(importMap)) {
+    throw new Error("invalid importMap", { cause: errInvalidInput });
   }
   return input;
 }
 
+initSync(wasm);

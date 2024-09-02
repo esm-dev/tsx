@@ -27,7 +27,7 @@ export const Features = {
 };
 
 export function transform({ filename, code, ...options }) {
-  if (typeof filename !== "string" || filename.length === 0) {
+  if (typeof filename !== "string" || filename.length === "") {
     throw new Error("filename is required");
   }
   if (typeof code !== "string") {
