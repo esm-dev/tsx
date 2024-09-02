@@ -10,26 +10,18 @@ export interface ImportMap {
 }
 
 export interface SWCTransformOptions {
-  lang?: "ts" | "tsx" | "js" | "jsx";
-  sourceMap?: "inline" | "external";
-  importMap?: ImportMap;
   isDev?: boolean;
   hmr?: HmrOptions;
-  target?:
-    | "es2015"
-    | "es2016"
-    | "es2017"
-    | "es2018"
-    | "es2019"
-    | "es2020"
-    | "es2021"
-    | "es2022";
+  importMap?: ImportMap;
   jsxImportSource?: string;
+  lang?: "ts" | "tsx" | "js" | "jsx";
+  target?: "es2015" | "es2016" | "es2017" | "es2018" | "es2019" | "es2020" | "es2021" | "es2022";
   minify?: boolean;
   keepNames?: boolean;
+  sourceMap?: "inline" | "external";
   treeShaking?: boolean;
-  versionMap?: Record<string, string>;
   globalVersion?: string;
+  versionMap?: Record<string, string>;
 }
 
 export interface SWCTransformResult {
