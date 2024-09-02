@@ -70,7 +70,7 @@ pub fn transform(specifier: &str, source: &str, swc_transform_options: JsValue) 
     options.version_map.unwrap_or_default(),
     options.global_version,
   )));
-  let target = match options.target.unwrap_or_default().as_str() {
+  let target = match options.target.unwrap_or("esnext".into()).to_lowercase().as_str() {
     "es2015" => EsVersion::Es2015,
     "es2016" => EsVersion::Es2016,
     "es2017" => EsVersion::Es2017,
@@ -79,7 +79,12 @@ pub fn transform(specifier: &str, source: &str, swc_transform_options: JsValue) 
     "es2020" => EsVersion::Es2020,
     "es2021" => EsVersion::Es2021,
     "es2022" => EsVersion::Es2022,
-    _ => EsVersion::EsNext, // latest version
+    "es2023" => EsVersion::EsNext,
+    "es2024" => EsVersion::EsNext,
+    "esnext" => EsVersion::EsNext,
+    _ =>  {
+      return Err(JsError::new("Invalid target").into());
+    }
   };
   let module = match SWC::parse(specifier, source, options.lang) {
     Ok(ret) => ret,
