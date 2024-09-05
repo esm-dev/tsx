@@ -1,26 +1,50 @@
-export interface HmrOptions {
-  runtime: string;
-  reactRefresh?: boolean;
-  reactRefreshRuntime?: string;
-}
-
+/** Import Map fllow the spec: https://wicg.github.io/import-maps/ */
 export interface ImportMap {
   imports?: Record<string, string>;
   scopes?: Record<string, Record<string, string>>;
 }
 
+export interface Runtime {
+  runtime: string;
+}
+
+/** delopment options. */
+export interface DevOptions {
+  /** hot module replacement, default is disabled. */
+  hmr?: Runtime;
+  /** enable react refresh, default is disabled. */
+  reactRefresh?: Partial<Runtime>;
+}
+
+/** transform options for swc. */
 export interface SWCTransformOptions {
-  isDev?: boolean;
-  hmr?: HmrOptions;
+  /** The import map, pass it if the browser does not support import maps. */
   importMap?: ImportMap;
+  /**
+   * The jsx import source, default is "react".
+   *
+   * Alternative you can set it by adding "@jsxImportSource" entry in the import map.
+   * ```json
+   * {
+   *  "imports": {
+   *   "@jsxImportSource": "https://esm.sh/react"
+   * }
+   * ```
+   */
   jsxImportSource?: string;
-  lang?: "ts" | "tsx" | "js" | "jsx";
+  /** The transform target, default is "esnext". */
   target?: "es2015" | "es2016" | "es2017" | "es2018" | "es2019" | "es2020" | "es2021" | "es2022" | "es2023" | "es2024" | "esnext";
+  /** minify code, default is disabled. */
   minify?: boolean;
+  /** keep names, default is disabled. */
   keepNames?: boolean;
-  sourceMap?: "inline" | "external";
+  /** strip unused code, default is disabled. */
   treeShaking?: boolean;
-  globalVersion?: string;
+  /** create source map, default is disabled. */
+  sourceMap?: "inline" | "external";
+  /** development mode, default is disabled. */
+  dev?: DevOptions;
+  /** The version map for the module resolver. */
   versionMap?: Record<string, string>;
 }
 

@@ -1,6 +1,6 @@
 use crate::error::{DiagnosticBuffer, ErrorBuffer};
 use crate::graph::ImportAnalyzer;
-use crate::hmr::{HmrOptions, HMR};
+use crate::dev::{DevOptions, DevFold};
 use crate::minifier::Minifier;
 use crate::resolver::Resolver;
 
@@ -27,8 +27,8 @@ use swc_ecmascript::visit::{as_folder, Fold, FoldWith};
 #[derive(Clone)]
 pub struct EmitOptions {
   pub source_map: Option<String>,
-  pub is_dev: bool,
-  pub hmr: Option<HmrOptions>,
+  // pub is_dev: bool,
+  pub dev: Option<DevOptions>,
   pub target: EsVersion,
   pub jsx_import_source: Option<String>,
   pub minify: bool,
@@ -40,8 +40,8 @@ impl Default for EmitOptions {
   fn default() -> Self {
     EmitOptions {
       source_map: None,
-      is_dev: false,
-      hmr: None,
+      // is_dev: false,
+      dev: None,
       target: EsVersion::Es2022,
       jsx_import_source: None,
       minify: false,
@@ -61,11 +61,11 @@ pub struct SWC {
 
 impl SWC {
   /// Parse the source code of a JS/TS module into an AST.
-  pub fn parse(specifier: &str, source: &str, lang: Option<String>) -> Result<Self, DiagnosticBuffer> {
+  pub fn parse(specifier: &str, source: &str) -> Result<Self, DiagnosticBuffer> {
     let source_map = SourceMap::default();
     let source_file = source_map.new_source_file(FileName::Real(Path::new(specifier).to_path_buf()).into(), source.into());
     let error_buffer = ErrorBuffer::new(specifier);
-    let syntax = get_syntax(specifier, lang);
+    let syntax = get_syntax(specifier);
     let input = StringInput::from(&*source_file);
     let comments = SingleThreadedComments::default();
     let lexer = Lexer::new(syntax, EsVersion::EsNext, input, Some(&comments));
@@ -103,17 +103,17 @@ impl SWC {
       let top_level_mark = Mark::new();
       let is_ts = self.specifier.ends_with(".ts") || self.specifier.ends_with(".mts") || self.specifier.ends_with(".tsx");
       let is_jsx = self.specifier.ends_with(".tsx") || self.specifier.ends_with(".jsx");
-      let specifier_is_remote = resolver.borrow().specifier_is_remote;
+      let is_http_sepcifier = resolver.borrow().is_http_specifier;
       let jsx_options = if let Some(jsx_import_source) = &options.jsx_import_source {
         react::Options {
           runtime: Some(react::Runtime::Automatic),
           import_source: Some(jsx_import_source.to_owned()),
-          development: Some(options.is_dev),
+          development: options.dev.as_ref().map(|_| true),
           ..Default::default()
         }
       } else {
         react::Options {
-          development: Some(options.is_dev),
+          development: options.dev.as_ref().map(|_| true),
           ..Default::default()
         }
       };
@@ -205,15 +205,12 @@ impl SWC {
           ),
           is_ts && is_jsx
         ),
-        Optional::new(react::jsx_src(options.is_dev, self.source_map.clone()), is_jsx),
+        Optional::new(react::jsx_src(options.dev.is_some(), self.source_map.clone()), is_jsx),
         Optional::new(
           react::jsx(
             self.source_map.clone(),
             Some(&self.comments),
-            react::Options {
-              development: Some(options.is_dev),
-              ..jsx_options
-            },
+            jsx_options,
             top_level_mark,
             unresolved_mark,
           ),
@@ -221,7 +218,7 @@ impl SWC {
         ),
         Optional::new(
           react::refresh(
-            options.is_dev,
+            options.dev.is_some(),
             Some(react::RefreshOptions {
               refresh_reg: "$RefreshReg$".into(),
               refresh_sig: "$RefreshSig$".into(),
@@ -232,12 +229,12 @@ impl SWC {
             top_level_mark
           ),
           options
-            .hmr
+            .dev
             .as_ref()
-            .unwrap_or(&HmrOptions::default())
+            .unwrap_or(&DevOptions::default())
             .react_refresh
-            .unwrap_or_default()
-            && !specifier_is_remote
+            .is_some()
+            && !is_http_sepcifier
         ),
         Optional::new(paren_remover(Some(&self.comments)), options.minify),
         compat_pass,
@@ -246,11 +243,11 @@ impl SWC {
           mark_src_location: None,
         },
         Optional::new(
-          HMR {
+          DevFold {
             specifier: self.specifier.clone(),
-            options: options.hmr.as_ref().unwrap_or(&HmrOptions::default()).clone(),
+            options: options.dev.as_ref().unwrap_or(&DevOptions::default()).clone(),
           },
-          options.hmr.is_some() && !specifier_is_remote
+          options.dev.is_some() && !is_http_sepcifier
         ),
         compat::reserved_words::reserved_words(),
         helpers::inject_helpers(top_level_mark),
@@ -355,19 +352,15 @@ fn get_ts_config(tsx: bool) -> TsSyntax {
   }
 }
 
-fn get_syntax(specifier: &str, lang: Option<String>) -> Syntax {
-  let lang = if let Some(lang) = lang {
-    lang
-  } else {
-    specifier
-      .split(|c| c == '?' || c == '#')
-      .next()
-      .unwrap()
-      .split('.')
-      .last()
-      .unwrap_or("js")
-      .to_lowercase()
-  };
+fn get_syntax(specifier: &str) -> Syntax {
+  let lang = specifier
+    .split(|c| c == '?' || c == '#')
+    .next()
+    .unwrap()
+    .split('.')
+    .last()
+    .unwrap_or("js")
+    .to_lowercase();
   match lang.as_str() {
     "js" | "mjs" => Syntax::Es(get_es_config(false)),
     "jsx" => Syntax::Es(get_es_config(true)),

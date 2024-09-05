@@ -14,15 +14,11 @@ fn transform(specifer: &str, source: &str, options: &EmitOptions) -> (String, Op
   )
   .expect("could not pause the import map")
   .import_map;
-  let mut graph_versions: HashMap<String, String> = HashMap::new();
-  graph_versions.insert("./foo.ts".into(), "100".into());
-  let module = SWC::parse(specifer, source, None).expect("could not parse module");
-  let resolver = Rc::new(RefCell::new(Resolver::new(
-    specifer,
-    Some(importmap),
-    graph_versions,
-    Some("1.0.0".into()),
-  )));
+  let mut version_map: HashMap<String, String> = HashMap::new();
+  version_map.insert("./foo.ts".into(), "100".into());
+  version_map.insert("*".into(), "1.0.0".into());
+  let module = SWC::parse(specifer, source).expect("could not parse module");
+  let resolver = Rc::new(RefCell::new(Resolver::new(specifer, Some(importmap), Some(version_map))));
   let (code, source_map) = module.transform(resolver.clone(), options).unwrap();
   println!("{}", code);
   (code, source_map, resolver)
@@ -134,12 +130,13 @@ fn hmr() {
     "./app.tsx",
     source,
     &EmitOptions {
-      is_dev: true,
-      hmr: Some(HmrOptions {
-        runtime: "/hmr.js".to_owned(),
-        react_refresh: Some(true),
-        react_refresh_runtime: Some("react-refresh/runtime".to_owned()),
-        ..Default::default()
+      dev: Some(DevOptions {
+        hmr: Some(dev::HmrOptions {
+          runtime: "/hmr.js".to_owned(),
+        }),
+        react_refresh: Some(dev::ReactRefreshOptions {
+          runtime: Some("https://esm.sh/react-refresh/runtime".to_owned()),
+        }),
       }),
       jsx_import_source: Some("https://esm.sh/react@18".to_owned()),
       ..Default::default()
@@ -147,7 +144,7 @@ fn hmr() {
   );
   assert!(code.contains("import __CREATE_HOT_CONTEXT__ from \"/hmr.js\""));
   assert!(code.contains("import.meta.hot = __CREATE_HOT_CONTEXT__(\"./app.tsx\")"));
-  assert!(code.contains("import { __REACT_REFRESH_RUNTIME__, __REACT_REFRESH__ } from \"react-refresh/runtime\""));
+  assert!(code.contains("import { __REACT_REFRESH_RUNTIME__, __REACT_REFRESH__ } from \"https://esm.sh/react-refresh/runtime\""));
   assert!(code.contains("const prevRefreshReg = $RefreshReg$"));
   assert!(code.contains("const prevRefreshSig = $RefreshSig$"));
   assert!(code.contains("window.$RefreshReg$ = (type, id)=>__REACT_REFRESH_RUNTIME__.register(type, \"./app.tsx\" + \" \" + id);"));
@@ -167,13 +164,7 @@ fn tree_shaking() {
     import React from "react"
     let foo = "bar"
   "#;
-  let (code, _, _) = transform(
-    "./test.js",
-    source,
-    &EmitOptions {
-      ..Default::default()
-    },
-  );
+  let (code, _, _) = transform("./test.js", source, &EmitOptions { ..Default::default() });
   assert_eq!(code, "import React from \"https://esm.sh/react@18\";\nlet foo = \"bar\";\n");
   let (code, _, _) = transform(
     "./test.js",

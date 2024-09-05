@@ -24,32 +24,29 @@ pub struct Resolver {
   /// the text specifier associated with the import/export statement.
   pub specifier: String,
   /// a flag indicating if the specifier is a remote(http) url.
-  pub specifier_is_remote: bool,
+  pub is_http_specifier: bool,
   /// a ordered dependencies of the module
   pub deps: Vec<DependencyDescriptor>,
-  /// the global version
-  pub global_version: Option<String>,
   /// the graph versions
-  pub version_map: HashMap<String, String>,
-  // internal
-  import_map: Option<ImportMap>,
+  pub version_map: Option<HashMap<String, String>>,
+  /// the import map
+  pub import_map: Option<ImportMap>,
 }
 
 impl Resolver {
-  pub fn new(specifier: &str, import_map: Option<ImportMap>, version_map: HashMap<String, String>, global_version: Option<String>) -> Self {
+  pub fn new(specifier: &str, import_map: Option<ImportMap>, version_map: Option<HashMap<String, String>>) -> Self {
     Resolver {
       specifier: specifier.into(),
-      specifier_is_remote: is_http_url(specifier),
+      is_http_specifier: is_http_url(specifier),
       deps: Vec::new(),
       import_map,
       version_map,
-      global_version,
     }
   }
 
   /// Resolve import/export URLs.
   pub fn resolve(&mut self, specifier: &str, dynamic: bool, loc: Option<Span>) -> String {
-    let referrer = if self.specifier_is_remote {
+    let referrer = if self.is_http_specifier {
       Url::from_str(self.specifier.as_str()).unwrap()
     } else {
       Url::from_str(&("file://".to_owned() + self.specifier.trim_start_matches('.'))).unwrap()
@@ -65,7 +62,7 @@ impl Resolver {
     };
     let mut import_url = if resolved_url.starts_with("file://") {
       let path = resolved_url.strip_prefix("file://").unwrap();
-      if !self.specifier_is_remote {
+      if !self.is_http_specifier {
         let mut buf = PathBuf::from(self.specifier.trim_start_matches('.'));
         buf.pop();
         let path = diff_paths(&path, buf).unwrap().to_slash().unwrap().to_string();
@@ -96,17 +93,19 @@ impl Resolver {
     }
 
     if !is_remote {
-      // apply graph version if exists
-      let v = if self.version_map.contains_key(&fixed_url) {
-        self.version_map.get(&fixed_url)
-      } else {
-        self.global_version.as_ref()
-      };
-      if let Some(version) = v {
-        if import_url.contains("?") {
-          import_url = format!("{}&v={}", import_url, version);
+      let mut v: Option<&String> = None;
+      if let Some(version_map) = &self.version_map {
+        if version_map.contains_key(&fixed_url) {
+          v = version_map.get(&fixed_url)
         } else {
-          import_url = format!("{}?v={}", import_url, version);
+          v = version_map.get("*")
+        }
+      };
+      if let Some(v) = v {
+        if import_url.contains("?") {
+          import_url = format!("{}&v={}", import_url, v);
+        } else {
+          import_url = format!("{}?v={}", import_url, v);
         }
       }
     }

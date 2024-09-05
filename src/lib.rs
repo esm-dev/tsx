@@ -1,7 +1,7 @@
 mod css;
 mod error;
 mod graph;
-mod hmr;
+mod dev;
 mod minifier;
 mod resolver;
 mod swc;
@@ -10,7 +10,7 @@ mod swc_helpers;
 #[cfg(test)]
 mod test;
 
-use hmr::HmrOptions;
+use dev::DevOptions;
 use resolver::{is_http_url, DependencyDescriptor, Resolver};
 use serde::{Deserialize, Serialize};
 use std::cell::RefCell;
@@ -25,17 +25,14 @@ use wasm_bindgen::prelude::*;
 #[derive(Deserialize)]
 #[serde(deny_unknown_fields, rename_all = "camelCase")]
 pub struct SWCTransformOptions {
-  pub lang: Option<String>,
   pub source_map: Option<String>,
   pub import_map: Option<serde_json::Value>,
-  pub is_dev: Option<bool>,
-  pub hmr: Option<HmrOptions>,
+  pub dev: Option<DevOptions>,
   pub target: Option<String>,
   pub jsx_import_source: Option<String>,
   pub minify: Option<bool>,
   pub keep_names: Option<bool>,
   pub tree_shaking: Option<bool>,
-  pub global_version: Option<String>,
   pub version_map: Option<HashMap<String, String>>,
 }
 
@@ -54,7 +51,7 @@ pub struct SWCTransformOutput {
 #[wasm_bindgen(js_name = "transform")]
 pub fn transform(specifier: &str, source: &str, swc_transform_options: JsValue) -> Result<JsValue, JsError> {
   let options: SWCTransformOptions = serde_wasm_bindgen::from_value(swc_transform_options).unwrap();
-  let importmap = if let Some(import_map_json) = options.import_map {
+  let im = if let Some(import_map_json) = options.import_map {
     match import_map::parse_from_value(Url::from_str("file:///import_map.json").unwrap(), import_map_json) {
       Ok(ret) => Some(ret.import_map),
       Err(e) => {
@@ -64,12 +61,7 @@ pub fn transform(specifier: &str, source: &str, swc_transform_options: JsValue) 
   } else {
     None
   };
-  let resolver = Rc::new(RefCell::new(Resolver::new(
-    specifier,
-    importmap.to_owned(),
-    options.version_map.unwrap_or_default(),
-    options.global_version,
-  )));
+  let resolver = Rc::new(RefCell::new(Resolver::new(specifier, im.to_owned(), options.version_map)));
   let target = match options.target.unwrap_or("esnext".into()).to_lowercase().as_str() {
     "es2015" => EsVersion::Es2015,
     "es2016" => EsVersion::Es2016,
@@ -82,11 +74,11 @@ pub fn transform(specifier: &str, source: &str, swc_transform_options: JsValue) 
     "es2023" => EsVersion::EsNext,
     "es2024" => EsVersion::EsNext,
     "esnext" => EsVersion::EsNext,
-    _ =>  {
+    _ => {
       return Err(JsError::new("Invalid target").into());
     }
   };
-  let module = match SWC::parse(specifier, source, options.lang) {
+  let module = match SWC::parse(specifier, source) {
     Ok(ret) => ret,
     Err(e) => {
       return Err(JsError::new(&e.to_string()).into());
@@ -94,7 +86,7 @@ pub fn transform(specifier: &str, source: &str, swc_transform_options: JsValue) 
   };
   let jsx_import_source = if let Some(jsx_import_source) = options.jsx_import_source {
     Some(jsx_import_source)
-  } else if let Some(importmap) = importmap {
+  } else if let Some(importmap) = im {
     // check `@jsxImportSource` in the import map
     let referrer = if is_http_url(specifier) {
       Url::from_str(specifier).unwrap()
@@ -111,8 +103,7 @@ pub fn transform(specifier: &str, source: &str, swc_transform_options: JsValue) 
   };
   let emit_options = EmitOptions {
     source_map: options.source_map,
-    is_dev: options.is_dev.unwrap_or_default(),
-    hmr: options.hmr,
+    dev: options.dev,
     target,
     jsx_import_source,
     minify: options.minify.unwrap_or_default(),
