@@ -22,8 +22,8 @@ async function build() {
   await writeFile(
     "./pkg/esm_compiler.d.ts",
     [
-      `import { SWCTransformOptions, SWCTransformResult } from "../types/swc.d.ts";`,
-      `import { LightningCSSTransformOptions, LightningCSSTransformResult } from "../types/lightningcss.d.ts";`,
+      `import type { SWCTransformOptions, SWCTransformResult } from "../types/swc.d.ts";`,
+      `import type { LightningCSSTransformOptions, LightningCSSTransformResult } from "../types/lightningcss.d.ts";`,
       dts.replace(
         `swc_transform_options: any): any`,
         `swc_transform_options: SWCTransformOptions): SWCTransformResult`,

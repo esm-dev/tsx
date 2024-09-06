@@ -1,7 +1,7 @@
 mod css;
+mod dev;
 mod error;
 mod graph;
-mod dev;
 mod minifier;
 mod resolver;
 mod swc;
@@ -98,11 +98,20 @@ pub fn transform(specifier: &str, source: &str, swc_transform_options: JsValue) 
   } else {
     None
   };
+  let source_map = if let Some(source_map) = options.source_map {
+    match source_map.as_str() {
+      "inline" => Some("inline".into()),
+      "external" => Some("external".into()),
+      _ => None,
+    }
+  } else {
+    None
+  };
   let emit_options = EmitOptions {
-    source_map: options.source_map,
-    dev: options.dev,
+    source_map,
     target,
     jsx_import_source,
+    dev: options.dev,
     minify: options.minify.unwrap_or_default(),
     keep_names: options.keep_names.unwrap_or_default(),
     tree_shaking: options.tree_shaking.unwrap_or_default(),

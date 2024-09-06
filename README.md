@@ -9,21 +9,21 @@ The compiler for esm.sh playground written in Rust, powered by
 import init, { transform } from "https://esm.sh/esm-compiler";
 await init();
 
-const tsx = `
+const appTsx = `
 import { useState } from "react"
 
 export default App() {
-  const [ msg ] = useState<string>("world")
+  const [msg] = useState<string>("world")
   return <h1>Hello {msg}!</h1>
 }
 `
 const importMap = {
   imports: {
-    "@jsxImportSource": "https://esm.sh/react@18.3.1"
-    "react": "https://esm.sh/react@18.3.1",
+    "@jsxImportSource": "https://esm.sh/react@18"
+    "react": "https://esm.sh/react@18",
   }
 }
-const ret = transform("./App.tsx", tsx, { importMap })
+const ret = transform("./App.tsx", appTsx, { importMap })
 console.log(ret.code)
 ```
 
