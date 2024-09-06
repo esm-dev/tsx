@@ -34,34 +34,34 @@ pub struct TransformResult {
   pub dependencies: Option<Vec<Dependency>>,
 }
 
-#[derive(Debug, Deserialize)]
+#[derive(Deserialize)]
 #[serde(untagged)]
 pub enum AnalyzeDependenciesOption {
   Bool(bool),
   Config(AnalyzeDependenciesConfig),
 }
 
-#[derive(Debug, Deserialize)]
+#[derive(Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct AnalyzeDependenciesConfig {
   preserve_imports: bool,
 }
 
-#[derive(Debug, Deserialize)]
+#[derive(Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct Drafts {
   #[serde(default)]
   pub custom_media: bool,
 }
 
-#[derive(Debug, Deserialize)]
+#[derive(Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct NonStandard {
   #[serde(default)]
   deep_selector_combinator: bool,
 }
 
-#[derive(Debug, Deserialize)]
+#[derive(Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct TransformOptions {
   pub targets: Option<Browsers>,
@@ -80,14 +80,14 @@ pub struct TransformOptions {
   pub error_recovery: Option<bool>,
 }
 
-#[derive(Debug, Deserialize)]
+#[derive(Deserialize)]
 #[serde(untagged)]
 pub enum CssModulesOption {
   Bool(bool),
   Config(CssModulesConfig),
 }
 
-#[derive(Debug, Deserialize)]
+#[derive(Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct CssModulesConfig {
   pattern: Option<String>,
@@ -97,7 +97,7 @@ pub struct CssModulesConfig {
   custom_idents: Option<bool>,
 }
 
-#[derive(Debug, Deserialize)]
+#[derive(Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct OwnedPseudoClasses {
   pub hover: Option<String>,

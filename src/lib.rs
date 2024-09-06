@@ -37,13 +37,10 @@ pub struct SWCTransformOptions {
 }
 
 #[derive(Serialize)]
-#[serde(rename_all = "camelCase")]
 pub struct SWCTransformOutput {
   pub code: String,
-
   #[serde(skip_serializing_if = "Vec::is_empty")]
   pub deps: Vec<DependencyDescriptor>,
-
   #[serde(skip_serializing_if = "Option::is_none")]
   pub map: Option<String>,
 }

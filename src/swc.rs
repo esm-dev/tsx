@@ -24,10 +24,8 @@ use swc_ecmascript::parser::{EsSyntax, StringInput, Syntax, TsSyntax};
 use swc_ecmascript::visit::{as_folder, Fold, FoldWith};
 
 /// Options for transpiling a module.
-#[derive(Clone)]
 pub struct EmitOptions {
   pub source_map: Option<String>,
-  // pub is_dev: bool,
   pub dev: Option<DevOptions>,
   pub target: EsVersion,
   pub jsx_import_source: Option<String>,
@@ -40,7 +38,6 @@ impl Default for EmitOptions {
   fn default() -> Self {
     EmitOptions {
       source_map: None,
-      // is_dev: false,
       dev: None,
       target: EsVersion::Es2022,
       jsx_import_source: None,
@@ -254,7 +251,7 @@ impl SWC {
         Optional::new(dce::dce(Default::default(), unresolved_mark), options.tree_shaking),
         Optional::new(
           as_folder(Minifier {
-            cm: self.source_map.clone(),
+            sm: self.source_map.clone(),
             comments: Some(self.comments.clone()),
             unresolved_mark,
             top_level_mark,

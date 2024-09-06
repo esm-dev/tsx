@@ -8,7 +8,7 @@ use std::str::FromStr;
 use swc_common::Span;
 use url::Url;
 
-#[derive(Clone, Debug, Eq, PartialEq, Serialize)]
+#[derive(Serialize, Clone)]
 #[serde(rename_all = "camelCase")]
 pub struct DependencyDescriptor {
   pub specifier: String,

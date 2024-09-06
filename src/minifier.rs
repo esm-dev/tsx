@@ -8,7 +8,7 @@ use swc_ecmascript::ast::*;
 use swc_ecmascript::visit::{noop_visit_mut_type, VisitMut};
 
 pub struct Minifier {
-  pub cm: Lrc<SourceMap>,
+  pub sm: Lrc<SourceMap>,
   pub comments: Option<SingleThreadedComments>,
   pub unresolved_mark: Mark,
   pub top_level_mark: Mark,
@@ -22,7 +22,7 @@ impl VisitMut for Minifier {
     m.map_with_mut(|m| {
       optimize(
         m.into(),
-        self.cm.clone(),
+        self.sm.clone(),
         self.comments.as_ref().map(|v| v as &dyn Comments),
         None,
         &MinifyOptions {
