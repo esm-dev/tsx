@@ -125,7 +125,7 @@ export default App() {
           filename: fd.get("filename"),
           code: fd.get("code"),
           target: fd.get("target"),
-          importMap: fd.get("importMap"),
+          importMap: JSON.parse(fd.get("importMap")),
           minify: fd.get("minify") === "on",
           keepNames: fd.get("keepNames") === "on",
           treeShaking: fd.get("treeShaking") === "on",
