@@ -15,7 +15,7 @@ export default class EsmCompiler extends WorkerEntrypoint {
     }
     try {
       const { filename, code, ...options } = validateInput(await req.json());
-      if (filename.endsWith(".css") || options.lang === "css") {
+      if (filename.endsWith(".css")) {
         return Response.json(transformCSS(filename, code, options));
       }
       return Response.json(transform(filename, code, options));
@@ -37,23 +37,27 @@ function isObject(v) {
   return v !== null && typeof v === "object" && !Array.isArray(v);
 }
 
+function invalid(message) {
+  return new Error(message, { cause: errInvalidInput });
+}
+
 function validateInput(input) {
   if (!isObject(input)) {
-    throw new Error("input must be an object", { cause: errInvalidInput });
+    throw invalid("input must be an object");
   }
   const { filename, code, importMap } = input;
   if (typeof filename !== "string" || filename === "") {
-    throw new Error("filename is required", { cause: errInvalidInput });
+    throw invalid("filename is required");
   }
   if (typeof code !== "string") {
-    throw new Error("code is required", { cause: errInvalidInput });
+    throw invalid("code is required");
   }
   // limit input source code size to 10MB
   if (code.length > 10 * MB) {
-    throw new Error("code is too large", { cause: errInvalidInput });
+    throw invalid("code is too large");
   }
   if (importMap !== undefined && !isObject(importMap)) {
-    throw new Error("invalid importMap", { cause: errInvalidInput });
+    throw invalid("invalid importMap");
   }
   return input;
 }
