@@ -8,7 +8,7 @@
   <style>
     textarea {
       width: 600px;
-      min-height: 240px;
+      min-height: 80px;
       padding: 4px 8px;
       field-sizing: content;
       font-family: monospace;
@@ -30,77 +30,76 @@ import { useState } from "react"
 export default function App() {
   const [msg] = useState<string>("world")
   return <h1>Hello {msg}!</h1>
-}
-    </textarea>
+}</textarea>
 
-    <h4>Options</h4>
-    <p>
-      <label>
-        Filename:
-        <select name="filename">
-          <option value="main.js">main.js</option>
-          <option value="main.jsx">main.jsx</option>
-          <option value="main.ts">main.ts</option>
-          <option value="main.tsx" selected>main.tsx</option>
-        </select>
-      </label>
-    </p>
-    <p>
-      <label>
-        Target:
-        <select name="target">
-          <option value="es2015">es2015</option>
-          <option value="es2016">es2016</option>
-          <option value="es2017">es2017</option>
-          <option value="es2018">es2018</option>
-          <option value="es2019">es2019</option>
-          <option value="es2020">es2020</option>
-          <option value="es2021">es2021</option>
-          <option value="es2022">es2022</option>
-          <option value="esnext" selected>esnext</option>
-        </select>
-      </label>
-    </p>
-    <p>
-      <label>
-        Import Map: <br>
-        <textarea name="importMap" style="min-height:80px;"
-          oninput="try{let a=JSON.parse(value);if (!a||typeof a!=='object'||Array.isArray(a))throw 1;style.outlineColor=''}catch(e){style.outlineColor='red'}">{
+    <h4>Import Map</h4>
+    <textarea name="importMap"
+      oninput="try{let a=JSON.parse(value);if (!a||typeof a!=='object'||Array.isArray(a))throw 1;style.outlineColor=''}catch(e){style.outlineColor='red'}">{
   "imports": {
     "@jsxImportSource": "https://esm.sh/react@18",
     "react": "https://esm.sh/react@18"
   }
 }</textarea>
-      </label>
-    </p>
-    <p>
-      <label>
-        Minify:
-        <input type="checkbox" name="minify" checked>
-      </label>
-    </p>
-    <p>
-      <label>
-        Keep Names:
-        <input type="checkbox" name="keepNames">
-      </label>
-    </p>
-    <p>
-      <label>
-        Tree Shaking:
-        <input type="checkbox" name="treeShaking">
-      </label>
-    </p>
-    <p>
-      <label>
-        Source Map:
-        <select name="sourceMap">
-          <option value="">None</option>
-          <option value="inline">Inline</option>
-          <option value="external" selected>External</option>
-        </select>
-      </label>
-    </p>
+
+    <details>
+      <summary>Options</summary>
+      <p>
+        <label>
+          Filename:
+          <select name="filename">
+            <option value="main.js">main.js</option>
+            <option value="main.jsx">main.jsx</option>
+            <option value="main.ts">main.ts</option>
+            <option value="main.tsx" selected>main.tsx</option>
+          </select>
+        </label>
+      </p>
+      <p>
+        <label>
+          Target:
+          <select name="target">
+            <option value="es2015">es2015</option>
+            <option value="es2016">es2016</option>
+            <option value="es2017">es2017</option>
+            <option value="es2018">es2018</option>
+            <option value="es2019">es2019</option>
+            <option value="es2020">es2020</option>
+            <option value="es2021">es2021</option>
+            <option value="es2022">es2022</option>
+            <option value="esnext" selected>esnext</option>
+          </select>
+        </label>
+      </p>
+      <p>
+        <label>
+          Minify:
+          <input type="checkbox" name="minify" checked>
+        </label>
+      </p>
+      <p>
+        <label>
+          Keep Names:
+          <input type="checkbox" name="keepNames">
+        </label>
+      </p>
+      <p>
+        <label>
+          Tree Shaking:
+          <input type="checkbox" name="treeShaking">
+        </label>
+      </p>
+      <p>
+        <label>
+          Source Map:
+          <select name="sourceMap">
+            <option value="">None</option>
+            <option value="inline">Inline</option>
+            <option value="external" selected>External</option>
+          </select>
+        </label>
+      </p>
+    </details>
+
     <p>
       <button type="submit">Transform</button>
     </p>
@@ -119,6 +118,8 @@ export default function App() {
       const fd = new FormData(e.target);
       loading.style.display = "block";
       result_h.style.display = "none";
+      result.textContent = "";
+      error.textContent = "";
       fetch("/", {
         method: "POST",
         body: JSON.stringify({
