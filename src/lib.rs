@@ -36,6 +36,22 @@ pub struct SWCTransformOptions {
   pub version_map: Option<HashMap<String, String>>,
 }
 
+impl Default for SWCTransformOptions {
+  fn default() -> Self {
+    Self {
+      source_map: None,
+      import_map: None,
+      dev: None,
+      target: None,
+      jsx_import_source: None,
+      minify: None,
+      keep_names: None,
+      tree_shaking: None,
+      version_map: None,
+    }
+  }
+}
+
 #[derive(Serialize)]
 pub struct SWCTransformOutput {
   pub code: String,
@@ -47,7 +63,7 @@ pub struct SWCTransformOutput {
 
 #[wasm_bindgen(js_name = "transform")]
 pub fn transform(specifier: &str, source: &str, swc_transform_options: JsValue) -> Result<JsValue, JsError> {
-  let options: SWCTransformOptions = serde_wasm_bindgen::from_value(swc_transform_options).unwrap();
+  let options: SWCTransformOptions = serde_wasm_bindgen::from_value(swc_transform_options).unwrap_or_default();
   let im = if let Some(import_map_json) = options.import_map {
     match import_map::parse_from_value(Url::from_str("file:///import_map.json").unwrap(), import_map_json) {
       Ok(ret) => Some(ret.import_map),
@@ -77,8 +93,8 @@ pub fn transform(specifier: &str, source: &str, swc_transform_options: JsValue) 
   };
   let module = match SWC::parse(specifier, source) {
     Ok(ret) => ret,
-    Err(e) => {
-      return Err(JsError::new(&e.to_string()).into());
+    Err(err) => {
+      return Err(JsError::new(&err.to_string()).into());
     }
   };
   let jsx_import_source = if let Some(jsx_import_source) = options.jsx_import_source {
@@ -100,17 +116,17 @@ pub fn transform(specifier: &str, source: &str, swc_transform_options: JsValue) 
   };
   let source_map = if let Some(source_map) = options.source_map {
     match source_map.as_str() {
-      "inline" => Some("inline".into()),
-      "external" => Some("external".into()),
+      "inline" => Some("inline".to_owned()),
+      "external" => Some("external".to_owned()),
       _ => None,
     }
   } else {
     None
   };
   let emit_options = EmitOptions {
-    source_map,
     target,
     jsx_import_source,
+    source_map,
     dev: options.dev,
     minify: options.minify.unwrap_or_default(),
     keep_names: options.keep_names.unwrap_or_default(),
