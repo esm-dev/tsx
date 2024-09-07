@@ -34,7 +34,7 @@
     "prepublishOnly": "node build.mjs",
     "build": "node build.mjs",
     "test": "cargo test --all",
-    "deploy-worker": "node build.mjs && npx -y wrangler@3.73.0 deploy --name esm-compiler --compatibility-date 2024-09-01 workerd/worker.mjs"
+    "deploy-worker": "node build.mjs && npx -y wrangler@3.75.0 deploy --name esm-compiler --compatibility-date 2024-09-01 workerd/worker.mjs"
   },
   "repository": {
     "type": "git",
