@@ -82,8 +82,7 @@ impl SWC {
         let mut diagnostic = err.into_diagnostic(&handler);
         diagnostic.emit();
         DiagnosticBuffer::from_error_buffer(error_buffer, |span| sm.lookup_char_pos(span.lo))
-      })
-      .unwrap();
+      })?;
 
     Ok(SWC {
       specifier: specifier.into(),
