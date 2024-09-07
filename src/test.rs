@@ -159,7 +159,7 @@ fn hmr() {
 }
 
 #[test]
-fn tree_shaking() {
+fn minify_and_tree_shaking() {
   let source = r#"
     import React from "react"
     let foo = "bar"
@@ -170,11 +170,12 @@ fn tree_shaking() {
     "./test.js",
     source,
     &EmitOptions {
+      minify: true,
       tree_shaking: true,
       ..Default::default()
     },
   );
-  assert_eq!(code, "import \"https://esm.sh/react@18\";\n");
+  assert_eq!(code, "import\"https://esm.sh/react@18\";");
 }
 
 #[test]

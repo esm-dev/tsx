@@ -35,35 +35,76 @@ export const test = async () => {
   // test jsx transform
   {
     const source = `
-      import { renderToString } from "react-dom/server";
-      const msg:string = "Hello world";
-      renderToString(<p>{msg}</p>)
+      import { useState } from "react"
+      import { createRoot } from "react-dom/client"
+
+      export default function App() {
+        const [msg] = useState<string>("world")
+        return <h1>Hello {msg}!</h1>
+      }
+      createRoot(document.getElementById("app")).render(<App />)
     `;
     const { deps, code } = transform("source.tsx", source, {
       importMap: {
         "imports": {
           "@jsxImportSource": "https://esm.sh/react@18",
-          "react-dom/server": "https://esm.sh/react-dom@18/server",
+          "react": "https://esm.sh/react@18",
+          "react-dom/": "https://esm.sh/react-dom@18/",
         },
       },
     });
-    if (!code.includes(`import { jsx as _jsx } from "https://esm.sh/react@18/jsx-runtime"`)) {
+    if (!code.includes(`} from "https://esm.sh/react@18/jsx-runtime"`)) {
       throw new Error("jsx-runtime not imported");
     }
-    if (!code.includes(`import { renderToString } from "https://esm.sh/react-dom@18/server"`)) {
-      throw new Error("'react-dom' should be replaced");
+    if (!code.includes(`} from "https://esm.sh/react@18"`)) {
+      throw new Error("'react' not resolved");
     }
-    if (!code.includes(`_jsx("p`)) {
+    if (!code.includes(`} from "https://esm.sh/react-dom@18/client"`)) {
+      throw new Error("'react-dom/client' not resolved");
+    }
+    if (!code.includes(`_jsxs("h1"`)) {
       throw new Error("jsx not transformed");
     }
-    if (deps?.length !== 2) {
-      throw new Error("deps length should be 2");
+    if (deps?.length !== 3) {
+      throw new Error("deps length should be 3");
+    }
+  }
+
+  // minify & tree-shaking
+  {
+    const source = `
+      import React from "react"
+      let foo = "bar"
+    `;
+    const { code } = transform("source.tsx", source, {
+      importMap: {
+        "imports": {
+          "react": "https://esm.sh/react@18",
+        },
+      },
+      minify: true,
+      treeShaking: true,
+    });
+    if (code !== `import"https://esm.sh/react@18";`) {
+      throw new Error("want minified code, got:"+ JSON.stringify(code));
+    }
+  }
+
+  // throw syntax error
+  {
+    try {
+      const source = `export App() {}`;
+      transform("source.tsx", source);
+    } catch (error) {
+      if (error.message !== "Expected '{', got 'App' at source.tsx:1:7") {
+        throw error;
+      }
     }
   }
 
   console.log("%c✔ test passed", "color: green;");
 };
 
-if (process.argv[1] === new URL(import.meta.url).pathname) {
+if (import.meta.main || process.argv[1] === new URL(import.meta.url).pathname) {
   await test();
 }
