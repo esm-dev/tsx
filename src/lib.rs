@@ -1,7 +1,7 @@
 mod css;
 mod dev;
 mod error;
-mod graph;
+mod import_analyzer;
 mod minifier;
 mod resolver;
 mod swc;

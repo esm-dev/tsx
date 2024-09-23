@@ -1,6 +1,6 @@
+use crate::dev::{DevFold, DevOptions};
 use crate::error::{DiagnosticBuffer, ErrorBuffer};
-use crate::graph::ImportAnalyzer;
-use crate::dev::{DevOptions, DevFold};
+use crate::import_analyzer::ImportAnalyzer;
 use crate::minifier::Minifier;
 use crate::resolver::Resolver;
 
@@ -76,13 +76,11 @@ impl SWC {
       },
     );
     let sm = &source_map;
-    let module = parser
-      .parse_module()
-      .map_err(move |err| {
-        let mut diagnostic = err.into_diagnostic(&handler);
-        diagnostic.emit();
-        DiagnosticBuffer::from_error_buffer(error_buffer, |span| sm.lookup_char_pos(span.lo))
-      })?;
+    let module = parser.parse_module().map_err(move |err| {
+      let mut diagnostic = err.into_diagnostic(&handler);
+      diagnostic.emit();
+      DiagnosticBuffer::from_error_buffer(error_buffer, |span| sm.lookup_char_pos(span.lo))
+    })?;
 
     Ok(SWC {
       specifier: specifier.into(),
@@ -224,19 +222,12 @@ impl SWC {
             Some(&self.comments),
             top_level_mark
           ),
-          options
-            .dev
-            .as_ref()
-            .unwrap_or(&DevOptions::default())
-            .react_refresh
-            .is_some()
-            && !is_http_sepcifier
+          options.dev.as_ref().unwrap_or(&DevOptions::default()).react_refresh.is_some() && !is_http_sepcifier
         ),
         Optional::new(paren_remover(Some(&self.comments)), options.minify),
         compat_pass,
         ImportAnalyzer {
           resolver: resolver.clone(),
-          mark_src_location: None,
         },
         Optional::new(
           DevFold {

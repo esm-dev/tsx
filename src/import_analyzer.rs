@@ -2,23 +2,11 @@ use crate::resolver::Resolver;
 use crate::swc_helpers::*;
 use std::cell::RefCell;
 use std::rc::Rc;
-use swc_common::Span;
 use swc_ecmascript::ast::*;
 use swc_ecmascript::visit::{noop_fold_type, Fold, FoldWith};
 
 pub struct ImportAnalyzer {
   pub resolver: Rc<RefCell<Resolver>>,
-  pub mark_src_location: Option<bool>,
-}
-
-impl ImportAnalyzer {
-  fn as_location(&self, span: &Span) -> Option<Span> {
-    if self.mark_src_location.unwrap_or(false) {
-      Some(span.clone())
-    } else {
-      None
-    }
-  }
 }
 
 impl Fold for ImportAnalyzer {
@@ -39,7 +27,7 @@ impl Fold for ImportAnalyzer {
                 ModuleItem::ModuleDecl(ModuleDecl::Import(import_decl))
               } else {
                 let mut resolver = self.resolver.borrow_mut();
-                let resolved_url = resolver.resolve(import_decl.src.value.as_ref(), false, self.as_location(&import_decl.src.span));
+                let resolved_url = resolver.resolve(import_decl.src.value.as_ref(), false, Some(import_decl.src.span.clone()));
                 ModuleItem::ModuleDecl(ModuleDecl::Import(ImportDecl {
                   src: Box::new(new_str(&resolved_url)),
                   ..import_decl
@@ -66,7 +54,7 @@ impl Fold for ImportAnalyzer {
                 }))
               } else {
                 let mut resolver = self.resolver.borrow_mut();
-                let resolved_url = resolver.resolve(src.value.as_ref(), false, self.as_location(&src.span));
+                let resolved_url = resolver.resolve(src.value.as_ref(), false, Some(src.span.clone()));
                 ModuleItem::ModuleDecl(ModuleDecl::ExportNamed(NamedExport {
                   span,
                   specifiers,
@@ -84,7 +72,7 @@ impl Fold for ImportAnalyzer {
               type_only,
             }) => {
               let mut resolver = self.resolver.borrow_mut();
-              let resolved_url = resolver.resolve(src.value.as_ref(), false, self.as_location(&src.span));
+              let resolved_url = resolver.resolve(src.value.as_ref(), false, Some(src.span.clone()));
               ModuleItem::ModuleDecl(ModuleDecl::ExportAll(ExportAll {
                 span,
                 src: Box::new(new_str(&resolved_url)),
@@ -125,7 +113,7 @@ impl Fold for ImportAnalyzer {
         };
         if let Some(src) = src {
           let mut resolver = self.resolver.borrow_mut();
-          let new_src = resolver.resolve(src.value.as_ref(), true, self.as_location(&src.span));
+          let new_src = resolver.resolve(src.value.as_ref(), true, Some(src.span.clone()));
 
           args[0] = ExprOrSpread {
             spread: None,
@@ -153,7 +141,7 @@ impl Fold for ImportAnalyzer {
       };
       if let Some(src) = src {
         let mut resolver = self.resolver.borrow_mut();
-        let new_src = resolver.resolve(src.value.as_ref(), true, self.as_location(&src.span));
+        let new_src = resolver.resolve(src.value.as_ref(), true, Some(src.span.clone()));
 
         call.args[0] = ExprOrSpread {
           spread: None,

@@ -110,7 +110,7 @@ impl Resolver {
       }
     }
 
-    // update dep graph
+    // update the dep graph
     self.deps.push(DependencyDescriptor {
       specifier: fixed_url.clone(),
       resolved_url: import_url.clone(),
