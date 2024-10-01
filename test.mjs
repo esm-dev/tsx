@@ -47,7 +47,6 @@ export const test = async () => {
     const { deps, code } = transform("source.tsx", source, {
       importMap: {
         "imports": {
-          "@jsxImportSource": "https://esm.sh/react@18",
           "react": "https://esm.sh/react@18",
           "react-dom/": "https://esm.sh/react-dom@18/",
         },
