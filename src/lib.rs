@@ -106,7 +106,13 @@ pub fn transform(specifier: &str, source: &str, swc_transform_options: JsValue) 
     } else {
       Url::from_str(&("file://".to_owned() + specifier.trim_start_matches('.'))).unwrap()
     };
-    if let Ok(resolved) = importmap.resolve("@jsxImportSource", &referrer) {
+    if let Ok(resolved) = importmap.resolve("@jsxRuntime", &referrer) {
+      Some(resolved.to_string())
+    } else if let Ok(resolved) = importmap.resolve("@jsxImportSource", &referrer) {
+      Some(resolved.to_string())
+    } else if let Ok(resolved) = importmap.resolve("react", &referrer) {
+      Some(resolved.to_string())
+    } else if let Ok(resolved) = importmap.resolve("preact", &referrer) {
       Some(resolved.to_string())
     } else {
       None
