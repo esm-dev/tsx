@@ -1,40 +1,22 @@
 {
-  "name": "esm-compiler",
-  "version": "0.9.2",
-  "description": "The compiler for esm.sh playground written in Rust.",
+  "name": "esm-tsx",
+  "version": "1.0.0",
+  "description": "A TS/JSX transpiler for esm.sh playground written in Rust.",
   "type": "module",
-  "module": "./pkg/esm_compiler.js",
-  "types": "./pkg/esm_compiler.d.ts",
-  "exports": {
-    ".": {
-      "workerd": "./workerd/index.mjs",
-      "import": "./pkg/esm_compiler.js",
-      "types": "./pkg/esm_compiler.d.ts"
-    },
-    "./swc": {
-      "import": "./swc.mjs",
-      "types": "./types/swc.d.ts"
-    },
-    "./lightningcss": {
-      "import": "./lightningcss.mjs",
-      "types": "./types/lightningcss.d.ts"
-    }
-  },
+  "module": "./index.mjs",
+  "types": "./pkg/esm_tsx.d.ts",
   "sideEffects": false,
   "files": [
     "./types/",
-    "./pkg/esm_compiler_bg.wasm",
-    "./pkg/esm_compiler.js",
-    "./pkg/esm_compiler.d.ts",
-    "./workerd/index.mjs",
-    "./swc.mjs",
-    "./lightningcss.mjs"
+    "./index.mjs",
+    "./pkg/esm_tsx_bg.wasm",
+    "./pkg/esm_tsx.js",
+    "./pkg/esm_tsx.d.ts"
   ],
   "scripts": {
     "prepublishOnly": "node build.mjs",
     "build": "node build.mjs",
-    "test": "cargo test --all",
-    "deploy-worker": "node build.mjs && npx -y wrangler@3.75.0 deploy --name esm-compiler --compatibility-date 2024-09-01 workerd/worker.mjs"
+    "test": "cargo test --all"
   },
   "repository": {
     "type": "git",

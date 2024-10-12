@@ -1,38 +1,12 @@
 import { readFile } from "node:fs/promises";
-import init, { transform, transformCSS } from "./pkg/esm_compiler.js";
+import init, { transform  } from "./pkg/esm_tsx.js";
 
 export const test = async () => {
   const wasmData = await readFile(
-    new URL("./pkg/esm_compiler_bg.wasm", import.meta.url),
+    new URL("./pkg/esm_tsx_bg.wasm", import.meta.url),
   );
-  await init(wasmData);
+  await init({ module_or_path: wasmData });
 
-  // test css transform with css modules and nesting draft
-  {
-    const source = `
-      .foo {
-        color: red;
-
-        &.bar {
-          color: green
-        }
-      }
-    `;
-    const { exports, code } = transformCSS("source.module.css", source, {
-      cssModules: true,
-      targets: {
-        chrome: 95 << 16,
-      },
-    });
-    if (exports.size !== 2) {
-      throw new Error("css modules should be enabled");
-    }
-    if (code.includes(".foo.bar{")) {
-      throw new Error("css nesting should be downgraded");
-    }
-  }
-
-  // test jsx transform
   {
     const source = `
       import { useState } from "react"
@@ -66,26 +40,6 @@ export const test = async () => {
     }
     if (deps?.length !== 3) {
       throw new Error("deps length should be 3");
-    }
-  }
-
-  // minify & tree-shaking
-  {
-    const source = `
-      import React from "react"
-      let foo = "bar"
-    `;
-    const { code } = transform("source.tsx", source, {
-      importMap: {
-        "imports": {
-          "react": "https://esm.sh/react@18",
-        },
-      },
-      minify: true,
-      treeShaking: true,
-    });
-    if (code !== `import"https://esm.sh/react@18";`) {
-      throw new Error("want minified code, got:"+ JSON.stringify(code));
     }
   }
 

@@ -18,19 +18,15 @@ async function build() {
   const { test } = await import("./test.mjs");
   await test();
 
-  const dts = await readFile("./pkg/esm_compiler.d.ts", "utf8");
+  const dts = await readFile("./pkg/esm_tsx.d.ts", "utf8");
   await writeFile(
-    "./pkg/esm_compiler.d.ts",
+    "./pkg/esm_tsx.d.ts",
     [
       `import type { SWCTransformOptions, SWCTransformResult } from "../types/swc.d.ts";`,
-      `import type { LightningCSSTransformOptions, LightningCSSTransformResult } from "../types/lightningcss.d.ts";`,
       dts.replace(
         `swc_transform_options: any): any`,
         `swc_transform_options: SWCTransformOptions): SWCTransformResult`,
-      ).replace(
-        `lightningcss_transform_options: any): any`,
-        `lightningcss_transform_options: LightningCSSTransformOptions): LightningCSSTransformResult`,
-      ),
+      ) ,
     ].join("\n"),
     "utf8",
   );

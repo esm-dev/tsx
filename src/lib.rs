@@ -1,8 +1,6 @@
-mod css;
 mod dev;
 mod error;
 mod import_analyzer;
-mod minifier;
 mod resolver;
 mod swc;
 mod swc_helpers;
@@ -30,7 +28,6 @@ pub struct SWCTransformOptions {
   pub dev: Option<DevOptions>,
   pub target: Option<String>,
   pub jsx_import_source: Option<String>,
-  pub minify: Option<bool>,
   pub keep_names: Option<bool>,
   pub tree_shaking: Option<bool>,
   pub version_map: Option<HashMap<String, String>>,
@@ -44,7 +41,6 @@ impl Default for SWCTransformOptions {
       dev: None,
       target: None,
       jsx_import_source: None,
-      minify: None,
       keep_names: None,
       tree_shaking: None,
       version_map: None,
@@ -134,8 +130,6 @@ pub fn transform(specifier: &str, source: &str, swc_transform_options: JsValue) 
     jsx_import_source,
     source_map,
     dev: options.dev,
-    minify: options.minify.unwrap_or_default(),
-    keep_names: options.keep_names.unwrap_or_default(),
     tree_shaking: options.tree_shaking.unwrap_or_default(),
   };
   let (code, map) = match module.transform(resolver.clone(), &emit_options) {
@@ -154,11 +148,4 @@ pub fn transform(specifier: &str, source: &str, swc_transform_options: JsValue) 
     })
     .unwrap(),
   )
-}
-
-#[wasm_bindgen(js_name = "transformCSS")]
-pub fn transform_css(filename: &str, source: &str, lightningcss_transform_options: JsValue) -> Result<JsValue, JsError> {
-  let css_config: css::TransformOptions = serde_wasm_bindgen::from_value(lightningcss_transform_options).unwrap();
-  let res = css::compile(filename.into(), source, &css_config)?;
-  Ok(serde_wasm_bindgen::to_value(&res).unwrap())
 }

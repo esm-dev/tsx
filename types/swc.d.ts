@@ -34,10 +34,6 @@ export interface SWCTransformOptions {
   jsxImportSource?: string;
   /** The transform target, default is "esnext". */
   target?: "es2015" | "es2016" | "es2017" | "es2018" | "es2019" | "es2020" | "es2021" | "es2022" | "es2023" | "es2024" | "esnext";
-  /** minify code, default is disabled. */
-  minify?: boolean;
-  /** keep names, default is disabled. */
-  keepNames?: boolean;
   /** strip unused code, default is disabled. */
   treeShaking?: boolean;
   /** create source map, default is disabled. */

@@ -1,7 +1,6 @@
-# ESM Compiler
+# esm-tsx
 
-The compiler for esm.sh playground written in Rust, powered by
-[swc](https://swc.rs) and [lightningcss](https://lightningcss.dev/).
+A TS/JSX transpiler for esm.sh playground written in Rust, powered by [swc](https://swc.rs).
 
 ## Usage
 
@@ -19,7 +18,7 @@ export default App() {
 `
 const importMap = {
   imports: {
-    "@jsxImportSource": "https://esm.sh/react@18"
+    "@jsxRuntime": "https://esm.sh/react@18"
     "react": "https://esm.sh/react@18",
   }
 }

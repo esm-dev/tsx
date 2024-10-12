@@ -1,5 +1,4 @@
 use super::*;
-use lightningcss::targets::Browsers;
 use std::collections::HashMap;
 
 fn transform(specifer: &str, source: &str, options: &EmitOptions) -> (String, Option<String>, Rc<RefCell<Resolver>>) {
@@ -59,7 +58,7 @@ fn typescript() {
     console.log(`${toString({class: A})}`)
   "#;
   let (code, _, _) = transform("./test.ts", source, &EmitOptions::default());
-  assert!(code.contains("var D;"));
+  assert!(code.contains("var D = /*#__PURE__*/ function(D) {"));
   assert!(code.contains("enumerable(false)"));
 }
 
@@ -159,7 +158,7 @@ fn hmr() {
 }
 
 #[test]
-fn minify_and_tree_shaking() {
+fn tree_shaking() {
   let source = r#"
     import React from "react"
     let foo = "bar"
@@ -170,12 +169,11 @@ fn minify_and_tree_shaking() {
     "./test.js",
     source,
     &EmitOptions {
-      minify: true,
       tree_shaking: true,
       ..Default::default()
     },
   );
-  assert_eq!(code, "import\"https://esm.sh/react@18\";");
+  assert_eq!(code, "import \"https://esm.sh/react@18\";\n");
 }
 
 #[test]
@@ -204,65 +202,4 @@ fn source_map() {
   );
   assert!(!code.contains("//# sourceMappingURL=data:application/json;base64,"));
   assert!(source_map.is_some());
-}
-
-#[test]
-fn lightningcss() {
-  let source = r#"
-    @custom-media --modern (color), (hover);
-
-    .foo {
-      background: yellow;
-
-      -webkit-border-radius: 2px;
-      -moz-border-radius: 2px;
-      border-radius: 2px;
-
-      -webkit-transition: background 200ms;
-      -moz-transition: background 200ms;
-      transition: background 200ms;
-
-      &.bar {
-        color: green;
-      }
-    }
-
-    @media (--modern) and (width > 1024px) {
-      .a {
-        color: green;
-      }
-    }
-  "#;
-  let options = css::TransformOptions {
-    targets: Some(Browsers {
-      chrome: Some(95 << 16),
-      ..Browsers::default()
-    }),
-    include: 1 << 0, // nesting
-    exclude: 0,
-    drafts: Some(css::Drafts { custom_media: true }),
-    non_standard: None,
-    minify: Some(true),
-    source_map: None,
-    css_modules: None,
-    pseudo_classes: None,
-    unused_symbols: None,
-    analyze_dependencies: None,
-    error_recovery: None,
-  };
-  let res = css::compile("style.css".into(), source, &options).unwrap();
-  assert_eq!(res.code, ".foo{background:#ff0;border-radius:2px;transition:background .2s}.foo.bar{color:green}@media ((color) or (hover)) and (min-width:1024px){.a{color:green}}");
-
-  let source = r#"
-    .foo {
-      background: yellow;
-    }
-    :global(.bar) {
-      color: green;
-    }
-  "#;
-  let res = css::compile("style.module.css".into(), source, &options).unwrap();
-  assert!(res.exports.is_some());
-  assert_eq!(res.exports.unwrap().len(), 1);
-  assert_eq!(res.code, ".fk9XWG_foo{background:#ff0}.bar{color:green}");
 }

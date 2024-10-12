@@ -1,4 +1,4 @@
-import { transform as swc } from "./pkg/esm_compiler.js";
+import initWasm, { initSync as initWasmSync, transform as swc } from "./pkg/esm_tsx.js";
 
 export function transform({ filename, code, ...options }) {
   if (typeof filename !== "string" || filename === "") {
@@ -12,4 +12,12 @@ export function transform({ filename, code, ...options }) {
     throw new Error("invalid importMap");
   }
   return swc(filename, code, options);
+}
+
+export function initSync(module) {
+  return initWasmSync({ module });
+}
+
+export default function init(module_or_path) {
+  return initWasm(module_or_path ? { module_or_path } : undefined);
 }

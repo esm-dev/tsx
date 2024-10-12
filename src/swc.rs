@@ -1,7 +1,6 @@
 use crate::dev::{DevFold, DevOptions};
 use crate::error::{DiagnosticBuffer, ErrorBuffer};
 use crate::import_analyzer::ImportAnalyzer;
-use crate::minifier::Minifier;
 use crate::resolver::Resolver;
 
 use base64::{engine::general_purpose, Engine as _};
@@ -16,12 +15,12 @@ use swc_ecma_transforms::optimization::simplify::dce;
 use swc_ecma_transforms::pass::Optional;
 use swc_ecma_transforms::proposals::decorators;
 use swc_ecma_transforms::typescript::{tsx, typescript};
-use swc_ecma_transforms::{compat, fixer, helpers, hygiene, react, Assumptions};
+use swc_ecma_transforms::{fixer, helpers, hygiene, react};
 use swc_ecmascript::ast::{EsVersion, Module, Program};
 use swc_ecmascript::codegen::{text_writer::JsWriter, Config, Emitter, Node};
 use swc_ecmascript::parser::lexer::Lexer;
 use swc_ecmascript::parser::{EsSyntax, StringInput, Syntax, TsSyntax};
-use swc_ecmascript::visit::{as_folder, Fold, FoldWith};
+use swc_ecmascript::visit::{Fold, FoldWith};
 
 /// Options for transpiling a module.
 pub struct EmitOptions {
@@ -29,8 +28,6 @@ pub struct EmitOptions {
   pub dev: Option<DevOptions>,
   pub target: EsVersion,
   pub jsx_import_source: Option<String>,
-  pub minify: bool,
-  pub keep_names: bool,
   pub tree_shaking: bool,
 }
 
@@ -41,8 +38,6 @@ impl Default for EmitOptions {
       dev: None,
       target: EsVersion::Es2022,
       jsx_import_source: None,
-      minify: false,
-      keep_names: false,
       tree_shaking: false,
     }
   }
@@ -111,71 +106,6 @@ impl SWC {
           ..Default::default()
         }
       };
-      let assumptions = Assumptions::all();
-      let compat_pass = chain!(
-        Optional::new(
-          compat::class_fields_use_set::class_fields_use_set(assumptions.pure_getters),
-          assumptions.set_public_class_fields,
-        ),
-        Optional::new(
-          compat::es2022::es2022(
-            Some(&self.comments),
-            compat::es2022::Config {
-              class_properties: compat::es2022::class_properties::Config {
-                private_as_properties: assumptions.private_fields_as_properties,
-                constant_super: assumptions.constant_super,
-                set_public_fields: assumptions.set_public_class_fields,
-                no_document_all: assumptions.no_document_all,
-                static_blocks_mark: Mark::new(),
-                pure_getter: assumptions.pure_getters,
-              }
-            },
-            unresolved_mark
-          ),
-          options.target < EsVersion::Es2022
-        ),
-        Optional::new(compat::es2021::es2021(), options.target < EsVersion::Es2021),
-        Optional::new(
-          compat::es2020::es2020(
-            compat::es2020::Config {
-              nullish_coalescing: compat::es2020::nullish_coalescing::Config {
-                no_document_all: assumptions.no_document_all
-              },
-              optional_chaining: compat::es2020::optional_chaining::Config {
-                no_document_all: assumptions.no_document_all,
-                pure_getter: assumptions.pure_getters
-              }
-            },
-            unresolved_mark
-          ),
-          options.target < EsVersion::Es2020
-        ),
-        Optional::new(compat::es2019::es2019(), options.target < EsVersion::Es2019),
-        Optional::new(
-          compat::es2018(compat::es2018::Config {
-            object_rest_spread: compat::es2018::object_rest_spread::Config {
-              no_symbol: assumptions.object_rest_no_symbols,
-              set_property: assumptions.set_spread_properties,
-              pure_getters: assumptions.pure_getters
-            }
-          }),
-          options.target < EsVersion::Es2018,
-        ),
-        Optional::new(
-          compat::es2017(
-            compat::es2017::Config {
-              async_to_generator: compat::es2017::async_to_generator::Config {
-                ignore_function_name: assumptions.ignore_function_name,
-                ignore_function_length: assumptions.ignore_function_length
-              },
-            },
-            Some(&self.comments),
-            unresolved_mark
-          ),
-          options.target < EsVersion::Es2017
-        ),
-        Optional::new(compat::es2016(), options.target < EsVersion::Es2016),
-      );
       let visitor = chain!(
         swc_ecma_transforms::resolver(unresolved_mark, top_level_mark, is_ts),
         // todo: support the new decorators proposal
@@ -224,8 +154,7 @@ impl SWC {
           ),
           options.dev.as_ref().unwrap_or(&DevOptions::default()).react_refresh.is_some() && !is_http_sepcifier
         ),
-        Optional::new(paren_remover(Some(&self.comments)), options.minify),
-        compat_pass,
+        paren_remover(Some(&self.comments)),
         ImportAnalyzer {
           resolver: resolver.clone(),
         },
@@ -236,21 +165,9 @@ impl SWC {
           },
           options.dev.is_some() && !is_http_sepcifier
         ),
-        compat::reserved_words::reserved_words(),
         helpers::inject_helpers(top_level_mark),
         Optional::new(dce::dce(Default::default(), unresolved_mark), options.tree_shaking),
-        Optional::new(
-          as_folder(Minifier {
-            sm: self.source_map.clone(),
-            comments: Some(self.comments.clone()),
-            unresolved_mark,
-            top_level_mark,
-            keep_names: options.keep_names,
-          }),
-          options.minify
-        ),
         hygiene::hygiene_with_config(hygiene::Config {
-          keep_class_names: options.keep_names,
           top_level_mark,
           ..Default::default()
         }),
@@ -290,7 +207,7 @@ impl SWC {
       JsWriter::new(self.source_map.clone(), eol, &mut js_buf, None)
     };
     let mut emitter = Emitter {
-      cfg: Config::default().with_target(options.target).with_minify(options.minify),
+      cfg: Config::default().with_target(options.target).with_minify(false),
       comments: Some(&self.comments),
       cm: self.source_map.clone(),
       wr: writer,
