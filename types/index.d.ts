@@ -16,7 +16,7 @@ export interface DevOptions {
 }
 
 /** Transform options. */
-export interface SWCTransformOptions {
+export interface TransformOptions {
   /** The import map, pass it if the browser does not support import maps. */
   importMap?: ImportMap;
   /**
@@ -44,7 +44,7 @@ export interface SWCTransformOptions {
 }
 
 /** Transform result. */
-export interface SWCTransformResult {
+export interface TransformResult {
   readonly code: string;
   readonly map?: string;
   readonly deps?: DependencyDescriptor[];
@@ -59,4 +59,12 @@ export interface DependencyDescriptor {
 }
 
 /** Transforms the given code. */
-export function transform(options: { filename: string; code: string } & SWCTransformOptions): SWCTransformResult;
+export function transform(options: { filename: string; code: string } & TransformOptions): TransformResult;
+
+/** Instantiates the given `module`, which can either be bytes or a precompiled `WebAssembly.Module`. */
+export function initSync(module: BufferSource | WebAssembly.Module): { memory: WebAssembly.Memory };
+
+/** If `module_or_path` is {RequestInfo} or {URL}, makes a request and for everything else, calls `WebAssembly.instantiate` directly. */
+export default function init(
+  module_or_path?: RequestInfo | URL | Response | BufferSource | WebAssembly.Module,
+): Promise<{ memory: WebAssembly.Memory }>;
