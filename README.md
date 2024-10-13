@@ -5,7 +5,9 @@ A TS/JSX transpiler for esm.sh playground written in Rust, powered by [swc](http
 ## Usage
 
 ```js
-import init, { transform } from "https://esm.sh/esm-compiler";
+import init, { transform } from "https://esm.sh/esm-tsx";
+
+// initialize the wasm module
 await init();
 
 const appTsx = `
