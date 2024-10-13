@@ -108,6 +108,7 @@ impl SWC {
         }
       };
       let refresh_options = options.dev.clone().unwrap_or_default().refresh;
+      let prefresh_options = options.dev.clone().unwrap_or_default().prefresh;
       let visitor = chain!(
         swc_ecma_transforms::resolver(unresolved_mark, top_level_mark, is_ts),
         // todo: support the new decorators proposal
@@ -145,9 +146,9 @@ impl SWC {
             Some(&self.comments),
             top_level_mark
           ),
-          !is_http_sepcifier && refresh_options.is_some()
+          !is_http_sepcifier && (refresh_options.is_some() || prefresh_options.is_some())
         ),
-        Optional::new(swc_prefresh(&self.specifier), !is_http_sepcifier && refresh_options.is_some()),
+        Optional::new(swc_prefresh(&self.specifier), !is_http_sepcifier && prefresh_options.is_some()),
         Optional::new(
           react::jsx(
             self.source_map.clone(),

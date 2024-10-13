@@ -135,8 +135,8 @@ fn hmr() {
         }),
         refresh: Some(dev::RefreshOptions {
           runtime: "/@refresh.js".to_owned(),
-          preact: None,
         }),
+        ..Default::default()
       }),
       jsx_import_source: Some("https://esm.sh/react@18".to_owned()),
       ..Default::default()

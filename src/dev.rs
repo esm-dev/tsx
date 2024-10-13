@@ -15,7 +15,6 @@ pub struct HmrOptions {
 #[serde(rename_all = "camelCase")]
 pub struct RefreshOptions {
   pub runtime: String,
-  pub preact: Option<bool>,
 }
 
 #[derive(Deserialize, Clone)]
@@ -23,11 +22,16 @@ pub struct RefreshOptions {
 pub struct DevOptions {
   pub hmr: Option<HmrOptions>,
   pub refresh: Option<RefreshOptions>,
+  pub prefresh: Option<RefreshOptions>,
 }
 
 impl Default for DevOptions {
   fn default() -> Self {
-    DevOptions { hmr: None, refresh: None }
+    DevOptions {
+      hmr: None,
+      refresh: None,
+      prefresh: None,
+    }
   }
 }
 
@@ -77,7 +81,7 @@ impl Fold for DevFold {
       })));
     }
 
-    if let Some(refresh_options) = &self.options.refresh {
+    if let Some(refresh_options) = self.options.refresh.as_ref().or(self.options.prefresh.as_ref()) {
       for item in &module_items {
         if let ModuleItem::Stmt(Stmt::Expr(ExprStmt { expr, .. })) = &item {
           if let Expr::Call(call) = expr.as_ref() {

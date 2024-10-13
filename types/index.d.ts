@@ -9,10 +9,15 @@ export interface DevOptions {
   /** enable hot module replacement, default is disabled. */
   hmr?: { runtime: string };
   /**
-   * enable react/preact refresh, default is disabled.
+   * enable react refresh, default is disabled.
    * to enable it, you need to enable hmr first.
    */
-  refresh?: { runtime: string; preact?: boolean };
+  refresh?: { runtime: string };
+  /**
+   * enable preact refresh, default is disabled.
+   * to enable it, you need to enable hmr first.
+   */
+  prefresh?: { runtime: string };
 }
 
 /** Transform options. */
