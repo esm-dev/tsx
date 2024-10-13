@@ -4,17 +4,18 @@ mod import_analyzer;
 mod resolver;
 mod swc;
 mod swc_helpers;
+mod swc_prefresh;
 
 #[cfg(test)]
 mod test;
 
-use dev::DevOptions;
-use resolver::{is_http_url, DependencyDescriptor, Resolver};
-use serde::{Deserialize, Serialize};
 use std::cell::RefCell;
 use std::collections::HashMap;
 use std::rc::Rc;
 use std::str::FromStr;
+use dev::DevOptions;
+use resolver::{is_http_url, DependencyDescriptor, Resolver};
+use serde::{Deserialize, Serialize};
 use swc::{EmitOptions, SWC};
 use swc_ecmascript::ast::EsVersion;
 use url::Url;

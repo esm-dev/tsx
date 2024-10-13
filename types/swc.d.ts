@@ -12,8 +12,8 @@ export interface Runtime {
 export interface DevOptions {
   /** hot module replacement, default is disabled. */
   hmr?: Runtime;
-  /** enable react refresh, default is disabled. */
-  reactRefresh?: Partial<Runtime>;
+  /** enable react/preact refresh, default is disabled. */
+  refresh?: Runtime & { preact?: boolean };
 }
 
 /** transform options for swc. */

@@ -13,23 +13,21 @@ pub struct HmrOptions {
 
 #[derive(Deserialize, Clone)]
 #[serde(rename_all = "camelCase")]
-pub struct ReactRefreshOptions {
-  pub runtime: Option<String>,
+pub struct RefreshOptions {
+  pub runtime: String,
+  pub preact: Option<bool>,
 }
 
 #[derive(Deserialize, Clone)]
 #[serde(rename_all = "camelCase")]
 pub struct DevOptions {
   pub hmr: Option<HmrOptions>,
-  pub react_refresh: Option<ReactRefreshOptions>,
+  pub refresh: Option<RefreshOptions>,
 }
 
 impl Default for DevOptions {
   fn default() -> Self {
-    DevOptions {
-      hmr: None,
-      react_refresh: None,
-    }
+    DevOptions { hmr: None, refresh: None }
   }
 }
 
@@ -64,14 +62,11 @@ impl Fold for DevFold {
         expr: Box::new(Expr::Assign(AssignExpr {
           span: DUMMY_SP,
           op: AssignOp::Assign,
-          left: AssignTarget::Simple(SimpleAssignTarget::Member(new_member_expr(
-            simple_member_expr("import", "meta"),
-            "hot",
-          ))),
+          left: AssignTarget::Simple(SimpleAssignTarget::Member(member_expr(simple_member_expr("import", "meta"), "hot"))),
           right: Box::new(Expr::Call(CallExpr {
             span: DUMMY_SP,
             ctxt: SyntaxContext::empty(),
-            callee: Callee::Expr(Box::new(Expr::Ident(quote_ident!("__CREATE_HOT_CONTEXT__").into()))),
+            callee: Callee::Expr(Box::new(ident_expr("__CREATE_HOT_CONTEXT__"))),
             args: vec![ExprOrSpread {
               spread: None,
               expr: Box::new(Expr::Lit(Lit::Str(new_str(&self.specifier)))),
@@ -82,7 +77,7 @@ impl Fold for DevFold {
       })));
     }
 
-    if let Some(react_refresh) = &self.options.react_refresh {
+    if let Some(refresh_options) = &self.options.refresh {
       for item in &module_items {
         if let ModuleItem::Stmt(Stmt::Expr(ExprStmt { expr, .. })) = &item {
           if let Expr::Call(call) = expr.as_ref() {
@@ -94,63 +89,35 @@ impl Fold for DevFold {
         }
       }
       if refresh {
-        // import { __REACT_REFRESH_RUNTIME__, __REACT_REFRESH__ } from "REACT_REFRESH_RUNTIME"
+        // import { __REFRESH_RUNTIME__, __REFRESH__ } from "REFRESH_RUNTIME"
         items.push(ModuleItem::ModuleDecl(ModuleDecl::Import(ImportDecl {
           span: DUMMY_SP,
-          specifiers: vec![import_name("__REACT_REFRESH_RUNTIME__"), import_name("__REACT_REFRESH__")],
-          src: Box::new(new_str(&react_refresh.runtime.clone().unwrap_or("react-refresh/runtime".into()))),
+          specifiers: vec![import_name("__REFRESH_RUNTIME__"), import_name("__REFRESH__")],
+          src: Box::new(new_str(&refresh_options.runtime)),
           type_only: false,
           with: None,
           phase: ImportPhase::Evaluation,
         })));
-        // const prevRefreshReg = $RefreshReg$
-        items.push(rename_var_decl("prevRefreshReg", "$RefreshReg$"));
-        // const prevRefreshSig = $RefreshSig$
-        items.push(rename_var_decl("prevRefreshSig", "$RefreshSig$"));
-        // window.$RefreshReg$ = (type, id) => __REACT_REFRESH_RUNTIME__.register(type, $specifier + " " + id);
+        // const prevRefreshReg = window.$RefreshReg$
+        // const prevRefreshSig = window.$RefreshSig$
+        items.push(assign_decl("prevRefreshReg", simple_member_expr("window", "$RefreshReg$")));
+        items.push(assign_decl("prevRefreshSig", simple_member_expr("window", "$RefreshSig$")));
+        // window.$RefreshReg$ = __REFRESH_RUNTIME__.register($specifier);
         items.push(window_assign(
           "$RefreshReg$",
-          Expr::Arrow(ArrowExpr {
+          Expr::Call(CallExpr {
             span: DUMMY_SP,
             ctxt: SyntaxContext::empty(),
-            params: vec![pat_id("type"), pat_id("id")],
-            body: Box::new(BlockStmtOrExpr::Expr(Box::new(Expr::Call(CallExpr {
-              span: DUMMY_SP,
-              ctxt: SyntaxContext::empty(),
-              callee: Callee::Expr(Box::new(simple_member_expr("__REACT_REFRESH_RUNTIME__", "register"))),
-              args: vec![
-                ExprOrSpread {
-                  spread: None,
-                  expr: Box::new(Expr::Ident(quote_ident!("type").into())),
-                },
-                ExprOrSpread {
-                  spread: None,
-                  expr: Box::new(Expr::Bin(BinExpr {
-                    span: DUMMY_SP,
-                    op: BinaryOp::Add,
-                    left: Box::new(Expr::Bin(BinExpr {
-                      span: DUMMY_SP,
-                      op: BinaryOp::Add,
-                      left: Box::new(Expr::Lit(Lit::Str(new_str(&self.specifier)))),
-                      right: Box::new(Expr::Lit(Lit::Str(new_str(" ")))),
-                    })),
-                    right: Box::new(Expr::Ident(quote_ident!("id").into())),
-                  })),
-                },
-              ],
-              type_args: None,
-            })))),
-            is_async: false,
-            is_generator: false,
-            type_params: None,
-            return_type: None,
+            callee: Callee::Expr(Box::new(simple_member_expr("__REFRESH_RUNTIME__", "register"))),
+            args: vec![ExprOrSpread {
+              spread: None,
+              expr: Box::new(Expr::Lit(Lit::Str(new_str(&self.specifier)))),
+            }],
+            type_args: None,
           }),
         ));
-        // window.$RefreshSig$ = __REACT_REFRESH_RUNTIME__.createSignatureFunctionForTransform
-        items.push(window_assign(
-          "$RefreshSig$",
-          simple_member_expr("__REACT_REFRESH_RUNTIME__", "createSignatureFunctionForTransform"),
-        ));
+        // window.$RefreshSig$ = __REFRESH_RUNTIME__.sign
+        items.push(window_assign("$RefreshSig$", simple_member_expr("__REFRESH_RUNTIME__", "sign")));
       }
     }
 
@@ -160,22 +127,22 @@ impl Fold for DevFold {
 
     if refresh {
       // window.$RefreshReg$ = prevRefreshReg
-      items.push(window_assign("$RefreshReg$", Expr::Ident(quote_ident!("prevRefreshReg").into())));
       // window.$RefreshSig$ = prevRefreshSig
-      items.push(window_assign("$RefreshSig$", Expr::Ident(quote_ident!("prevRefreshSig").into())));
-      // import.meta.hot.accept(__REACT_REFRESH__)
+      items.push(window_assign("$RefreshReg$", ident_expr("prevRefreshReg")));
+      items.push(window_assign("$RefreshSig$", ident_expr("prevRefreshSig")));
+      // import.meta.hot.accept(__REFRESH__)
       items.push(ModuleItem::Stmt(Stmt::Expr(ExprStmt {
         span: DUMMY_SP,
         expr: Box::new(Expr::Call(CallExpr {
           span: DUMMY_SP,
           ctxt: SyntaxContext::empty(),
-          callee: Callee::Expr(Box::new(Expr::Member(new_member_expr(
-            Expr::Member(new_member_expr(simple_member_expr("import", "meta"), "hot")),
+          callee: Callee::Expr(Box::new(Expr::Member(member_expr(
+            Expr::Member(member_expr(simple_member_expr("import", "meta"), "hot")),
             "accept",
           )))),
           args: vec![ExprOrSpread {
             spread: None,
-            expr: Box::new(Expr::Ident(quote_ident!("__REACT_REFRESH__").into())),
+            expr: Box::new(ident_expr("__REFRESH__")),
           }],
           type_args: None,
         })),

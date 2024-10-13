@@ -2,6 +2,7 @@ use crate::dev::{DevFold, DevOptions};
 use crate::error::{DiagnosticBuffer, ErrorBuffer};
 use crate::import_analyzer::ImportAnalyzer;
 use crate::resolver::Resolver;
+use crate::swc_prefresh::swc_prefresh;
 
 use base64::{engine::general_purpose, Engine as _};
 use std::cell::RefCell;
@@ -10,7 +11,6 @@ use std::rc::Rc;
 use swc_common::comments::SingleThreadedComments;
 use swc_common::errors::{Handler, HandlerFlags};
 use swc_common::{chain, FileName, Globals, Mark, SourceMap};
-use swc_ecma_transforms::fixer::paren_remover;
 use swc_ecma_transforms::optimization::simplify::dce;
 use swc_ecma_transforms::pass::Optional;
 use swc_ecma_transforms::proposals::decorators;
@@ -18,7 +18,7 @@ use swc_ecma_transforms::typescript::{tsx, typescript};
 use swc_ecma_transforms::{fixer, helpers, hygiene, react};
 use swc_ecmascript::ast::{EsVersion, Module, Program};
 use swc_ecmascript::codegen::{text_writer::JsWriter, Config, Emitter, Node};
-use swc_ecmascript::parser::lexer::Lexer;
+use swc_ecmascript::parser::{lexer, Parser};
 use swc_ecmascript::parser::{EsSyntax, StringInput, Syntax, TsSyntax};
 use swc_ecmascript::visit::{Fold, FoldWith};
 
@@ -60,8 +60,8 @@ impl SWC {
     let syntax = get_syntax(specifier);
     let input = StringInput::from(&*source_file);
     let comments = SingleThreadedComments::default();
-    let lexer = Lexer::new(syntax, EsVersion::EsNext, input, Some(&comments));
-    let mut parser = swc_ecmascript::parser::Parser::new_from(lexer);
+    let lexer = lexer::Lexer::new(syntax, EsVersion::EsNext, input, Some(&comments));
+    let mut parser = Parser::new_from(lexer);
     let handler = Handler::with_emitter_and_flags(
       Box::new(error_buffer.clone()),
       HandlerFlags {
@@ -90,22 +90,24 @@ impl SWC {
     swc_common::GLOBALS.set(&Globals::new(), || {
       let unresolved_mark = Mark::new();
       let top_level_mark = Mark::new();
-      let is_ts = self.specifier.ends_with(".ts") || self.specifier.ends_with(".mts") || self.specifier.ends_with(".tsx");
+      let is_ts = self.specifier.ends_with(".ts") || self.specifier.ends_with(".tsx") || self.specifier.ends_with(".mts");
       let is_jsx = self.specifier.ends_with(".tsx") || self.specifier.ends_with(".jsx");
       let is_http_sepcifier = resolver.borrow().is_http_specifier;
+      let is_dev = options.dev.is_some();
       let jsx_options = if let Some(jsx_import_source) = &options.jsx_import_source {
         react::Options {
           runtime: Some(react::Runtime::Automatic),
           import_source: Some(jsx_import_source.to_owned()),
-          development: options.dev.as_ref().map(|_| true),
+          development: Some(is_dev),
           ..Default::default()
         }
       } else {
         react::Options {
-          development: options.dev.as_ref().map(|_| true),
+          development: Some(is_dev),
           ..Default::default()
         }
       };
+      let refresh_options = options.dev.clone().unwrap_or_default().refresh;
       let visitor = chain!(
         swc_ecma_transforms::resolver(unresolved_mark, top_level_mark, is_ts),
         // todo: support the new decorators proposal
@@ -129,7 +131,23 @@ impl SWC {
           ),
           is_ts && is_jsx
         ),
-        Optional::new(react::jsx_src(options.dev.is_some(), self.source_map.clone()), is_jsx),
+        Optional::new(react::jsx_src(is_dev, self.source_map.clone()), is_jsx),
+        Optional::new(react::jsx_self(is_dev), is_jsx),
+        Optional::new(
+          react::refresh(
+            is_dev,
+            Some(react::RefreshOptions {
+              refresh_reg: "$RefreshReg$".into(),
+              refresh_sig: "$RefreshSig$".into(),
+              emit_full_signatures: false,
+            }),
+            self.source_map.clone(),
+            Some(&self.comments),
+            top_level_mark
+          ),
+          !is_http_sepcifier && refresh_options.is_some()
+        ),
+        Optional::new(swc_prefresh(&self.specifier), !is_http_sepcifier && refresh_options.is_some()),
         Optional::new(
           react::jsx(
             self.source_map.clone(),
@@ -140,30 +158,18 @@ impl SWC {
           ),
           is_jsx
         ),
-        Optional::new(
-          react::refresh(
-            options.dev.is_some(),
-            Some(react::RefreshOptions {
-              refresh_reg: "$RefreshReg$".into(),
-              refresh_sig: "$RefreshSig$".into(),
-              emit_full_signatures: false,
-            }),
-            self.source_map.clone(),
-            Some(&self.comments),
-            top_level_mark
-          ),
-          options.dev.as_ref().unwrap_or(&DevOptions::default()).react_refresh.is_some() && !is_http_sepcifier
-        ),
-        paren_remover(Some(&self.comments)),
+        Optional::new(react::display_name(), is_jsx),
+        Optional::new(react::pure_annotations(Some(&self.comments)), is_jsx),
+        fixer::paren_remover(Some(&self.comments)),
         ImportAnalyzer {
           resolver: resolver.clone(),
         },
         Optional::new(
           DevFold {
             specifier: self.specifier.clone(),
-            options: options.dev.as_ref().unwrap_or(&DevOptions::default()).clone(),
+            options: options.dev.clone().unwrap_or_default(),
           },
-          options.dev.is_some() && !is_http_sepcifier
+          is_dev && !is_http_sepcifier
         ),
         helpers::inject_helpers(top_level_mark),
         Optional::new(dce::dce(Default::default(), unresolved_mark), options.tree_shaking),

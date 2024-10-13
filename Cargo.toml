@@ -19,8 +19,9 @@ url = "2.5.2"
 # docs: https://swc.rs
 # crate: https://crates.io/search?q=swc_ecmascript
 swc_atoms = "2.0.0"
+swc_core = { version = "1.0.0", features = [ "ecma_quote" ] }
 swc_common = { version = "1.0.0", features = ["sourcemap"] }
-swc_ecmascript = { version = "1.0.0", features = ["codegen", "parser", "utils", "visit"] }
+swc_ecmascript = { version = "1.0.0", features = ["codegen", "parser", "utils", "visit", "quote"] }
 swc_ecma_transforms = { version = "1.0.0", features = ["proposal", "typescript", "react", "optimization"] }
 
 # wasm-bindgen
@@ -30,10 +31,10 @@ serde-wasm-bindgen = "0.6.5"
 getrandom = { version = "0.2.15", features = ["js"] }
 
 [profile.release]
-# optimization for size (more aggressive)
-opt-level = 'z'
 # link time optimization using using whole-program analysis
 lto = true
+# optimization for size (more aggressive)
+opt-level = 'z'
 # less code to include into binary
 panic = 'abort'
 # optimization over all codebase (better optimization, slower build)

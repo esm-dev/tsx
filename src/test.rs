@@ -131,30 +131,35 @@ fn hmr() {
     &EmitOptions {
       dev: Some(DevOptions {
         hmr: Some(dev::HmrOptions {
-          runtime: "/hmr.js".to_owned(),
+          runtime: "/@hmr.js".to_owned(),
         }),
-        react_refresh: Some(dev::ReactRefreshOptions {
-          runtime: Some("https://esm.sh/react-refresh/runtime".to_owned()),
+        refresh: Some(dev::RefreshOptions {
+          runtime: "/@refresh.js".to_owned(),
+          preact: None,
         }),
       }),
       jsx_import_source: Some("https://esm.sh/react@18".to_owned()),
       ..Default::default()
     },
   );
-  assert!(code.contains("import __CREATE_HOT_CONTEXT__ from \"/hmr.js\""));
+  assert!(code.contains("import { jsxDEV as _jsxDEV } from \"https://esm.sh/react@18/jsx-dev-runtime\""));
+  assert!(code.contains("fileName: \"./app.tsx\""));
+  assert!(code.contains("lineNumber: 6"));
+  assert!(code.contains("columnNumber: 9"));
+  assert!(code.contains("import __CREATE_HOT_CONTEXT__ from \"/@hmr.js\""));
   assert!(code.contains("import.meta.hot = __CREATE_HOT_CONTEXT__(\"./app.tsx\")"));
-  assert!(code.contains("import { __REACT_REFRESH_RUNTIME__, __REACT_REFRESH__ } from \"https://esm.sh/react-refresh/runtime\""));
-  assert!(code.contains("const prevRefreshReg = $RefreshReg$"));
-  assert!(code.contains("const prevRefreshSig = $RefreshSig$"));
-  assert!(code.contains("window.$RefreshReg$ = (type, id)=>__REACT_REFRESH_RUNTIME__.register(type, \"./app.tsx\" + \" \" + id);"));
-  assert!(code.contains("window.$RefreshSig$ = __REACT_REFRESH_RUNTIME__.createSignatureFunctionForTransform"));
+  assert!(code.contains("import { __REFRESH_RUNTIME__, __REFRESH__ } from \"/@refresh.js\""));
+  assert!(code.contains("var prevRefreshReg = window.$RefreshReg$;"));
+  assert!(code.contains("var prevRefreshSig = window.$RefreshSig$;"));
+  assert!(code.contains("window.$RefreshReg$ = __REFRESH_RUNTIME__.register(\"./app.tsx\");"));
+  assert!(code.contains("window.$RefreshSig$ = __REFRESH_RUNTIME__.sign"));
   assert!(code.contains("var _s = $RefreshSig$()"));
   assert!(code.contains("_s()"));
   assert!(code.contains("_c = App"));
   assert!(code.contains("$RefreshReg$(_c, \"App\")"));
   assert!(code.contains("window.$RefreshReg$ = prevRefreshReg"));
   assert!(code.contains("window.$RefreshSig$ = prevRefreshSig;"));
-  assert!(code.contains("import.meta.hot.accept(__REACT_REFRESH__)"));
+  assert!(code.contains("import.meta.hot.accept(__REFRESH__)"));
 }
 
 #[test]

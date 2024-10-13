@@ -2,16 +2,16 @@ use swc_common::{SyntaxContext, DUMMY_SP};
 use swc_ecmascript::ast::*;
 use swc_ecmascript::utils::quote_ident;
 
-pub fn rename_var_decl(new_name: &str, old: &str) -> ModuleItem {
+pub fn assign_decl(var_name: &str, expr: Expr) -> ModuleItem {
   ModuleItem::Stmt(Stmt::Decl(Decl::Var(Box::new(VarDecl {
     span: DUMMY_SP,
     ctxt: SyntaxContext::empty(),
-    kind: VarDeclKind::Const,
+    kind: VarDeclKind::Var,
     declare: false,
     decls: vec![VarDeclarator {
       span: DUMMY_SP,
-      name: pat_id(new_name),
-      init: Some(Box::new(Expr::Ident(quote_ident!(old).into()))),
+      name: pat_id(var_name),
+      init: Some(Box::new(expr)),
       definite: false,
     }],
   }))))
@@ -23,10 +23,7 @@ pub fn window_assign(name: &str, expr: Expr) -> ModuleItem {
     expr: Box::new(Expr::Assign(AssignExpr {
       span: DUMMY_SP,
       op: AssignOp::Assign,
-      left: AssignTarget::Simple(SimpleAssignTarget::Member(new_member_expr(
-        Expr::Ident(quote_ident!("window").into()),
-        name,
-      ))),
+      left: AssignTarget::Simple(SimpleAssignTarget::Member(member_expr(ident_expr("window"), name))),
       right: Box::new(expr),
     })),
   }))
@@ -48,7 +45,7 @@ pub fn import_name(name: &str) -> ImportSpecifier {
   })
 }
 
-pub fn new_member_expr(obj: Expr, key: &str) -> MemberExpr {
+pub fn member_expr(obj: Expr, key: &str) -> MemberExpr {
   MemberExpr {
     span: DUMMY_SP,
     obj: Box::new(obj),
@@ -59,7 +56,7 @@ pub fn new_member_expr(obj: Expr, key: &str) -> MemberExpr {
 pub fn simple_member_expr(obj: &str, key: &str) -> Expr {
   Expr::Member(MemberExpr {
     span: DUMMY_SP,
-    obj: Box::new(Expr::Ident(quote_ident!(obj).into())),
+    obj: Box::new(ident_expr(obj)),
     prop: MemberProp::Ident(quote_ident!(key)),
   })
 }
@@ -83,4 +80,8 @@ pub fn new_str(s: &str) -> Str {
     value: s.into(),
     raw: None,
   }
+}
+
+pub fn ident_expr(s: &str) -> Expr {
+  Expr::Ident(quote_ident!(s).into())
 }
