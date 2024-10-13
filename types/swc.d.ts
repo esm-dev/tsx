@@ -4,19 +4,18 @@ export interface ImportMap {
   scopes?: Record<string, Record<string, string>>;
 }
 
-export interface Runtime {
-  runtime: string;
-}
-
-/** delopment options. */
+/** Delopment options. */
 export interface DevOptions {
-  /** hot module replacement, default is disabled. */
-  hmr?: Runtime;
-  /** enable react/preact refresh, default is disabled. */
-  refresh?: Runtime & { preact?: boolean };
+  /** enable hot module replacement, default is disabled. */
+  hmr?: { runtime: string };
+  /**
+   * enable react/preact refresh, default is disabled.
+   * to enable it, you need to enable hmr first.
+   */
+  refresh?: { runtime: string; preact?: boolean };
 }
 
-/** transform options for swc. */
+/** Transform options. */
 export interface SWCTransformOptions {
   /** The import map, pass it if the browser does not support import maps. */
   importMap?: ImportMap;
@@ -44,12 +43,14 @@ export interface SWCTransformOptions {
   versionMap?: Record<string, string>;
 }
 
+/** Transform result. */
 export interface SWCTransformResult {
   readonly code: string;
   readonly map?: string;
   readonly deps?: DependencyDescriptor[];
 }
 
+/** Dependency descriptor. */
 export interface DependencyDescriptor {
   readonly specifier: string;
   readonly resolvedUrl: string;
@@ -57,4 +58,5 @@ export interface DependencyDescriptor {
   readonly dynamic?: boolean;
 }
 
-export function transform(options: { code: string; filename: string } & SWCTransformOptions): SWCTransformResult;
+/** Transforms the given code. */
+export function transform(options: { filename: string; code: string } & SWCTransformOptions): SWCTransformResult;
