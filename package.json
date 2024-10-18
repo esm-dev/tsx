@@ -1,6 +1,6 @@
 {
   "name": "esm-tsx",
-  "version": "1.1.1",
+  "version": "1.1.2",
   "description": "A TS/JSX transpiler for esm.sh playground written in Rust.",
   "type": "module",
   "module": "./index.mjs",
