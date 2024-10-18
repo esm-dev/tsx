@@ -28,6 +28,8 @@ const ret = transform("./App.tsx", appTsx, { importMap })
 console.log(ret.code)
 ```
 
+More usage check [types/index.d.ts](./types/index.d.ts).
+
 ## Development Setup
 
 You will need [rust](https://www.rust-lang.org/tools/install) 1.60+ and
