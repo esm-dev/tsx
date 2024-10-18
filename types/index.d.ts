@@ -6,16 +6,24 @@ export interface ImportMap {
 
 /** Delopment options. */
 export interface DevOptions {
-  /** enable hot module replacement, default is disabled. */
+  /**
+   * Enable hot module replacement, default is disabled.
+   * ```js
+   * // the injected code
+   * import __CREATE_WEB_MODULE__ from '@hmr.js'
+   * import.meta.hot = __CREATE_HOT_CONTEXT__(import.meta.url)
+   */
   hmr?: { runtime: string };
   /**
-   * enable react refresh, default is disabled.
+   * Enable react refresh, default is disabled.
    * to enable it, you need to enable hmr first.
+   * The runtime module must export `__REFRESH_RUNTIME__` and `__REFRESH__`.
    */
   refresh?: { runtime: string };
   /**
-   * enable preact refresh, default is disabled.
+   * Enable preact refresh, default is disabled.
    * to enable it, you need to enable hmr first.
+   * The runtime module must export `__REFRESH_RUNTIME__` and `__REFRESH__`.
    */
   prefresh?: { runtime: string };
 }
