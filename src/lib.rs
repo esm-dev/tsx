@@ -9,13 +9,13 @@ mod swc_prefresh;
 #[cfg(test)]
 mod test;
 
+use dev::DevOptions;
+use resolver::{is_http_url, DependencyDescriptor, Resolver};
+use serde::{Deserialize, Serialize};
 use std::cell::RefCell;
 use std::collections::HashMap;
 use std::rc::Rc;
 use std::str::FromStr;
-use dev::DevOptions;
-use resolver::{is_http_url, DependencyDescriptor, Resolver};
-use serde::{Deserialize, Serialize};
 use swc::{EmitOptions, SWC};
 use swc_ecmascript::ast::EsVersion;
 use url::Url;
@@ -105,11 +105,9 @@ pub fn transform(specifier: &str, source: &str, swc_transform_options: JsValue) 
     };
     if let Ok(resolved) = importmap.resolve("@jsxRuntime", &referrer) {
       Some(resolved.to_string())
-    } else if let Ok(resolved) = importmap.resolve("@jsxImportSource", &referrer) {
+    } else if let Ok(resolved) = importmap.resolve("preact", &referrer) {
       Some(resolved.to_string())
     } else if let Ok(resolved) = importmap.resolve("react", &referrer) {
-      Some(resolved.to_string())
-    } else if let Ok(resolved) = importmap.resolve("preact", &referrer) {
       Some(resolved.to_string())
     } else {
       None
