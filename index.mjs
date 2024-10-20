@@ -14,6 +14,8 @@ export function transform({ filename, code, ...options }) {
   return swc(filename, code, options);
 }
 
+export const modUrl = import.meta.url;
+
 export function initSync(module) {
   return initWasmSync({ module });
 }
