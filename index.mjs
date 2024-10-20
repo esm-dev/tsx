@@ -20,6 +20,12 @@ export function initSync(module) {
   return initWasmSync({ module });
 }
 
-export default function init(module_or_path) {
+export default async function init(module_or_path) {
+  if (!module_or_path && globalThis.Deno && modUrl.startsWith("file://")) {
+    const wasmUrl = new URL("./pkg/esm_tsx_bg.wasm", modUrl);
+    const wasmBytes = await Deno.readFile(wasmUrl);
+    initWasmSync({ module: wasmBytes });
+    return;
+  }
   return initWasm(module_or_path ? { module_or_path } : undefined);
 }
