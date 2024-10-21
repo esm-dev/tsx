@@ -27,6 +27,8 @@ export interface DevOptions {
    * The runtime module must export `__REFRESH_RUNTIME__` and `__REFRESH__`.
    */
   prefresh?: { runtime: string };
+  /** Add `__source` props to JSX elements, default is disabled. */
+  jsxSource?: { fileName: string };
 }
 
 /** Transform options. */

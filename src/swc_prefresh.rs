@@ -1,4 +1,4 @@
-// source: https://github.com/swc-project/plugins/blob/main/packages/prefresh/transform/src/lib.rs
+// copied from https://github.com/swc-project/plugins/blob/main/packages/prefresh/transform/src/lib.rs
 use std::collections::{HashMap, HashSet};
 use std::hash::{DefaultHasher, Hasher};
 use std::str::FromStr;

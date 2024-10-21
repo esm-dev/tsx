@@ -124,7 +124,7 @@ fn hmr() {
     export default function App() {
       const [ msg ] = useState('Hello world!')
       return (
-        <h1 className="title">{msg}{foo()}</h1>
+        <h1 className="title"><strong>{msg}</strong></h1>
       )
     }
   "#;
@@ -139,6 +139,9 @@ fn hmr() {
         refresh: Some(dev::RefreshOptions {
           runtime: "/@refresh.js".to_owned(),
         }),
+        jsx_source:Some(dev::JsxSourceOptions {
+          file_name: "/project/app.tsx".to_owned(),
+        }),
         ..Default::default()
       }),
       jsx_import_source: Some("https://esm.sh/react@18".to_owned()),
@@ -146,7 +149,7 @@ fn hmr() {
     },
   );
   assert!(code.contains("import { jsxDEV as _jsxDEV } from \"https://esm.sh/react@18/jsx-dev-runtime\""));
-  assert!(code.contains("fileName: \"/app.tsx\""));
+  assert!(code.contains("fileName: \"/project/app.tsx\""));
   assert!(code.contains("lineNumber: 6"));
   assert!(code.contains("columnNumber: 9"));
   assert!(code.contains("import __CREATE_HOT_CONTEXT__ from \"/@hmr.js\""));

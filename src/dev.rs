@@ -19,10 +19,17 @@ pub struct RefreshOptions {
 
 #[derive(Deserialize, Clone)]
 #[serde(rename_all = "camelCase")]
+pub struct JsxSourceOptions {
+  pub file_name: String,
+}
+
+#[derive(Deserialize, Clone)]
+#[serde(rename_all = "camelCase")]
 pub struct DevOptions {
   pub hmr: Option<HmrOptions>,
   pub refresh: Option<RefreshOptions>,
   pub prefresh: Option<RefreshOptions>,
+  pub jsx_source: Option<JsxSourceOptions>,
 }
 
 impl Default for DevOptions {
@@ -31,6 +38,7 @@ impl Default for DevOptions {
       hmr: None,
       refresh: None,
       prefresh: None,
+      jsx_source: None,
     }
   }
 }

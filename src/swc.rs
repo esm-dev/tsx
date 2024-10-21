@@ -1,8 +1,9 @@
 use crate::dev::{DevFold, DevOptions};
 use crate::error::{DiagnosticBuffer, ErrorBuffer};
 use crate::import_analyzer::ImportAnalyzer;
-use crate::specifier::is_http_specifier;
 use crate::resolver::Resolver;
+use crate::specifier::is_http_specifier;
+use crate::swc_jsx_src::jsx_src;
 use crate::swc_prefresh::swc_prefresh;
 use base64::{engine::general_purpose, Engine as _};
 use std::cell::RefCell;
@@ -94,6 +95,7 @@ impl SWC {
       let is_jsx = self.specifier.ends_with(".tsx") || self.specifier.ends_with(".jsx");
       let is_http_sepcifier = is_http_specifier(&self.specifier);
       let is_dev = options.dev.is_some();
+      let dev_options = options.dev.clone().unwrap_or_default();
       let jsx_options = if let Some(jsx_import_source) = &options.jsx_import_source {
         react::Options {
           runtime: Some(react::Runtime::Automatic),
@@ -107,8 +109,6 @@ impl SWC {
           ..Default::default()
         }
       };
-      let refresh_options = options.dev.clone().unwrap_or_default().refresh;
-      let prefresh_options = options.dev.clone().unwrap_or_default().prefresh;
       let visitor = chain!(
         swc_ecma_transforms::resolver(unresolved_mark, top_level_mark, is_ts),
         // todo: support the new decorators proposal
@@ -132,7 +132,13 @@ impl SWC {
           ),
           is_ts && is_jsx
         ),
-        Optional::new(react::jsx_src(is_dev, self.source_map.clone()), is_jsx),
+        Optional::new(
+          jsx_src(
+            self.source_map.clone(),
+            dev_options.jsx_source.as_ref().map(|opts| opts.file_name.clone()),
+          ),
+          dev_options.jsx_source.is_some()
+        ),
         Optional::new(react::jsx_self(is_dev), is_jsx),
         Optional::new(
           react::refresh(
@@ -146,9 +152,9 @@ impl SWC {
             Some(&self.comments),
             top_level_mark
           ),
-          !is_http_sepcifier && (refresh_options.is_some() || prefresh_options.is_some())
+          !is_http_sepcifier && (dev_options.refresh.is_some() || dev_options.prefresh.is_some())
         ),
-        Optional::new(swc_prefresh(&self.specifier), !is_http_sepcifier && prefresh_options.is_some()),
+        Optional::new(swc_prefresh(&self.specifier), !is_http_sepcifier && dev_options.prefresh.is_some()),
         Optional::new(
           react::jsx(
             self.source_map.clone(),

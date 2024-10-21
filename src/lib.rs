@@ -6,6 +6,7 @@ mod resolver;
 mod specifier;
 mod swc;
 mod swc_helpers;
+mod swc_jsx_src;
 mod swc_prefresh;
 
 #[cfg(test)]
