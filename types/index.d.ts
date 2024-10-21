@@ -1,5 +1,6 @@
 /** Import Map fllow the spec: https://wicg.github.io/import-maps/ */
 export interface ImportMap {
+  $src?: string;
   imports?: Record<string, string>;
   scopes?: Record<string, Record<string, string>>;
 }
