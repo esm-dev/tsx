@@ -20,7 +20,6 @@ export default App() {
 `
 const importMap = {
   imports: {
-    "@jsxRuntime": "https://esm.sh/react@18"
     "react": "https://esm.sh/react@18",
   }
 }
