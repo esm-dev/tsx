@@ -8,18 +8,20 @@ crate-type = ["cdylib", "rlib"]
 
 [dependencies]
 base64 = "0.22.1"
-import_map = "0.20.1"
+indexmap = { version = "2.6.0", features = ["serde"] }
 path-slash = "0.2.1"
 pathdiff = "0.2.2"
+percent-encoding = "2.3.1"
 serde = { version = "1.0.210", features = ["derive"] }
-serde_json = "1.0.128"
-url = "2.5.2"
+serde_json = { version = "1.0.132", features = ["preserve_order"] }
+thiserror = "1.0.64"
+url = { version = "2.5.2", features = ["serde"] }
 
 # swc
 # docs: https://swc.rs
 # crate: https://crates.io/search?q=swc_ecmascript
 swc_atoms = "2.0.0"
-swc_core = { version = "1.0.0", features = [ "ecma_quote" ] }
+swc_core = { version = "1.0.4", features = ["ecma_quote" ] }
 swc_common = { version = "1.0.0", features = ["sourcemap"] }
 swc_ecmascript = { version = "1.0.0", features = ["codegen", "parser", "utils", "visit", "quote"] }
 swc_ecma_transforms = { version = "1.0.0", features = ["proposal", "typescript", "react", "optimization"] }

@@ -1,7 +1,9 @@
 mod dev;
 mod error;
 mod import_analyzer;
+mod import_map;
 mod resolver;
+mod specifier;
 mod swc;
 mod swc_helpers;
 mod swc_prefresh;
@@ -10,8 +12,9 @@ mod swc_prefresh;
 mod test;
 
 use dev::DevOptions;
-use resolver::{is_http_url, DependencyDescriptor, Resolver};
+use resolver::{DependencyDescriptor, Resolver};
 use serde::{Deserialize, Serialize};
+use specifier::is_http_specifier;
 use std::cell::RefCell;
 use std::collections::HashMap;
 use std::rc::Rc;
@@ -61,9 +64,17 @@ pub struct SWCTransformOutput {
 #[wasm_bindgen(js_name = "transform")]
 pub fn transform(specifier: &str, source: &str, swc_transform_options: JsValue) -> Result<JsValue, JsError> {
   let options: SWCTransformOptions = serde_wasm_bindgen::from_value(swc_transform_options).unwrap_or_default();
-  let im = if let Some(import_map_json) = options.import_map {
-    match import_map::parse_from_value(Url::from_str("file:///import_map.json").unwrap(), import_map_json) {
-      Ok(ret) => Some(ret.import_map),
+  let im = if let Some(import_map_raw) = options.import_map {
+    let src = if let Some(src) = import_map_raw.as_object().unwrap().get("$src") {
+      src.as_str()
+    } else {
+      None
+    };
+    match import_map::parse_from_value(
+      Url::from_str(src.unwrap_or("file:///anonymous_import_map.json")).unwrap(),
+      import_map_raw,
+    ) {
+      Ok(import_map) => Some(import_map),
       Err(e) => {
         return Err(JsError::new(&e.to_string()).into());
       }
@@ -98,7 +109,7 @@ pub fn transform(specifier: &str, source: &str, swc_transform_options: JsValue) 
     Some(jsx_import_source)
   } else if let Some(importmap) = im {
     // check `@jsxImportSource` in the import map
-    let referrer = if is_http_url(specifier) {
+    let referrer = if is_http_specifier(specifier) {
       Url::from_str(specifier).unwrap()
     } else {
       Url::from_str(&("file://".to_owned() + specifier.trim_start_matches('.'))).unwrap()

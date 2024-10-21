@@ -1,9 +1,9 @@
 use crate::dev::{DevFold, DevOptions};
 use crate::error::{DiagnosticBuffer, ErrorBuffer};
 use crate::import_analyzer::ImportAnalyzer;
+use crate::specifier::is_http_specifier;
 use crate::resolver::Resolver;
 use crate::swc_prefresh::swc_prefresh;
-
 use base64::{engine::general_purpose, Engine as _};
 use std::cell::RefCell;
 use std::path::Path;
@@ -88,11 +88,11 @@ impl SWC {
   /// Transpile a JS/TS module.
   pub fn transform(self, resolver: Rc<RefCell<Resolver>>, options: &EmitOptions) -> Result<(String, Option<String>), DiagnosticBuffer> {
     swc_common::GLOBALS.set(&Globals::new(), || {
-      let unresolved_mark = Mark::new();
       let top_level_mark = Mark::new();
+      let unresolved_mark = Mark::new();
       let is_ts = self.specifier.ends_with(".ts") || self.specifier.ends_with(".tsx") || self.specifier.ends_with(".mts");
       let is_jsx = self.specifier.ends_with(".tsx") || self.specifier.ends_with(".jsx");
-      let is_http_sepcifier = resolver.borrow().is_http_specifier;
+      let is_http_sepcifier = is_http_specifier(&self.specifier);
       let is_dev = options.dev.is_some();
       let jsx_options = if let Some(jsx_import_source) = &options.jsx_import_source {
         react::Options {

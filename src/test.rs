@@ -1,20 +1,21 @@
+use serde_json::json;
+
 use super::*;
 use std::collections::HashMap;
 
 fn transform(specifer: &str, source: &str, options: &EmitOptions) -> (String, Option<String>, Rc<RefCell<Resolver>>) {
-  let importmap = import_map::parse_from_json(
-    Url::from_str("file:///import_map.json").unwrap(),
-    r#"{
+  let importmap = import_map::parse_from_value(
+    Url::from_str("file:///index.html").unwrap(),
+    json!({
       "imports": {
         "~/": "./",
         "react": "https://esm.sh/react@18"
       }
-    }"#,
+    }),
   )
-  .expect("could not pause the import map")
-  .import_map;
+  .expect("could not pause the import map");
   let mut version_map: HashMap<String, String> = HashMap::new();
-  version_map.insert("./foo.ts".into(), "100".into());
+  version_map.insert("/foo.ts".into(), "2.0.0".into());
   version_map.insert("*".into(), "1.0.0".into());
   let module = SWC::parse(specifer, source).expect("could not parse module");
   let resolver = Rc::new(RefCell::new(Resolver::new(specifer, Some(importmap), Some(version_map))));
@@ -57,7 +58,7 @@ fn typescript() {
 
     console.log(`${toString({class: A})}`)
   "#;
-  let (code, _, _) = transform("./test.ts", source, &EmitOptions::default());
+  let (code, _, _) = transform("/test.ts", source, &EmitOptions::default());
   assert!(code.contains("var D = /*#__PURE__*/ function(D) {"));
   assert!(code.contains("enumerable(false)"));
 }
@@ -66,6 +67,7 @@ fn typescript() {
 fn module_analyzer() {
   let source = r#"
     import React from "react"
+    import { jsx } from "react/jsx-runtime"
     import { foo } from "~/foo.ts"
     import Layout from "./Layout.tsx"
     import "https://esm.sh/preact@10.13.0"
@@ -74,12 +76,13 @@ fn module_analyzer() {
     import("https://esm.sh/asksomeonelse")
     new Worker("https://esm.sh/asksomeonelse")
   "#;
-  let (code, _, _) = transform("./foo/bar/index.js", source, &EmitOptions::default());
+  let (code, _, _) = transform("/foo/bar/index.js", source, &EmitOptions::default());
   assert!(code.contains("\"https://esm.sh/react@18\""));
-  assert!(code.contains("\"../../foo.ts?v=100\""));
+  assert!(code.contains("\"https://esm.sh/react@18/jsx-runtime\""));
+  assert!(code.contains("\"../../foo.ts?im=L2luZGV4Lmh0bWw&v=2.0.0\""));
   assert!(code.contains("\"https://esm.sh/preact@10.13.0\""));
   assert!(code.contains("\"https://esm.sh/preact@10.13.0?dev\""));
-  assert!(code.contains("\"./Layout.tsx?v=1.0.0\""));
+  assert!(code.contains("\"./Layout.tsx?im=L2luZGV4Lmh0bWw&v=1.0.0\""));
   assert!(code.contains("\"../../style/app.css?module&v=1.0.0\""));
   assert!(code.contains("import(\"https://esm.sh/asksomeonelse\")"));
   assert!(code.contains("new Worker(\"https://esm.sh/asksomeonelse\")"));
@@ -97,7 +100,7 @@ fn tsx() {
     }
   "#;
   let (code, _, resolver) = transform(
-    "./app.tsx",
+    "/app.tsx",
     source,
     &EmitOptions {
       jsx_import_source: Some("https://esm.sh/react@18".to_owned()),
@@ -126,7 +129,7 @@ fn hmr() {
     }
   "#;
   let (code, _, _) = transform(
-    "./app.tsx",
+    "/app.tsx",
     source,
     &EmitOptions {
       dev: Some(DevOptions {
@@ -143,15 +146,15 @@ fn hmr() {
     },
   );
   assert!(code.contains("import { jsxDEV as _jsxDEV } from \"https://esm.sh/react@18/jsx-dev-runtime\""));
-  assert!(code.contains("fileName: \"./app.tsx\""));
+  assert!(code.contains("fileName: \"/app.tsx\""));
   assert!(code.contains("lineNumber: 6"));
   assert!(code.contains("columnNumber: 9"));
   assert!(code.contains("import __CREATE_HOT_CONTEXT__ from \"/@hmr.js\""));
-  assert!(code.contains("import.meta.hot = __CREATE_HOT_CONTEXT__(\"./app.tsx\")"));
+  assert!(code.contains("import.meta.hot = __CREATE_HOT_CONTEXT__(\"/app.tsx\")"));
   assert!(code.contains("import { __REFRESH_RUNTIME__, __REFRESH__ } from \"/@refresh.js\""));
   assert!(code.contains("var prevRefreshReg = window.$RefreshReg$;"));
   assert!(code.contains("var prevRefreshSig = window.$RefreshSig$;"));
-  assert!(code.contains("window.$RefreshReg$ = __REFRESH_RUNTIME__.register(\"./app.tsx\");"));
+  assert!(code.contains("window.$RefreshReg$ = __REFRESH_RUNTIME__.register(\"/app.tsx\");"));
   assert!(code.contains("window.$RefreshSig$ = __REFRESH_RUNTIME__.sign"));
   assert!(code.contains("var _s = $RefreshSig$()"));
   assert!(code.contains("_s()"));
@@ -168,10 +171,10 @@ fn tree_shaking() {
     import React from "react"
     let foo = "bar"
   "#;
-  let (code, _, _) = transform("./test.js", source, &EmitOptions { ..Default::default() });
+  let (code, _, _) = transform("/test.js", source, &EmitOptions { ..Default::default() });
   assert_eq!(code, "import React from \"https://esm.sh/react@18\";\nlet foo = \"bar\";\n");
   let (code, _, _) = transform(
-    "./test.js",
+    "/test.js",
     source,
     &EmitOptions {
       tree_shaking: true,
@@ -187,7 +190,7 @@ fn source_map() {
     const foo:string = "bar"
   "#;
   let (code, source_map, _) = transform(
-    "./test.js",
+    "/test.js",
     source,
     &EmitOptions {
       source_map: Some("inline".to_owned()),
@@ -198,7 +201,7 @@ fn source_map() {
   assert!(source_map.is_none());
 
   let (code, source_map, _) = transform(
-    "./test.js",
+    "/test.js",
     source,
     &EmitOptions {
       source_map: Some("external".to_owned()),

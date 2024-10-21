@@ -1,8 +1,11 @@
-use import_map::ImportMap;
+use crate::import_map::ImportMap;
+use crate::specifier::{is_css_specifier, is_http_specifier, is_relative_specifier};
+use base64::{engine::general_purpose, Engine as _};
 use path_slash::PathBufExt;
 use pathdiff::diff_paths;
 use serde::Serialize;
 use std::collections::HashMap;
+use std::ops::Not;
 use std::path::PathBuf;
 use std::str::FromStr;
 use swc_common::Span;
@@ -15,7 +18,7 @@ pub struct DependencyDescriptor {
   pub resolved_url: String,
   #[serde(skip_serializing_if = "Option::is_none")]
   pub loc: Option<Span>,
-  #[serde(skip_serializing_if = "is_false")]
+  #[serde(skip_serializing_if = "<&bool>::not")]
   pub dynamic: bool,
 }
 
@@ -23,8 +26,6 @@ pub struct DependencyDescriptor {
 pub struct Resolver {
   /// the text specifier associated with the import/export statement.
   pub specifier: String,
-  /// a flag indicating if the specifier is a remote(http) url.
-  pub is_http_specifier: bool,
   /// a ordered dependencies of the module
   pub deps: Vec<DependencyDescriptor>,
   /// the graph versions
@@ -37,7 +38,6 @@ impl Resolver {
   pub fn new(specifier: &str, import_map: Option<ImportMap>, version_map: Option<HashMap<String, String>>) -> Self {
     Resolver {
       specifier: specifier.into(),
-      is_http_specifier: is_http_url(specifier),
       deps: Vec::new(),
       import_map,
       version_map,
@@ -46,12 +46,12 @@ impl Resolver {
 
   /// Resolve import/export URLs.
   pub fn resolve(&mut self, specifier: &str, dynamic: bool, loc: Option<Span>) -> String {
-    let referrer = if self.is_http_specifier {
+    let referrer = if is_http_specifier(&self.specifier) {
       Url::from_str(self.specifier.as_str()).unwrap()
     } else {
-      Url::from_str(&("file://".to_owned() + self.specifier.trim_start_matches('.'))).unwrap()
+      Url::from_str(&("file://".to_owned() + self.specifier.as_str())).unwrap()
     };
-    let resolved_url = if let Some(import_map) = &self.import_map {
+    let im_resolved_url = if let Some(import_map) = &self.import_map {
       if let Ok(ret) = import_map.resolve(specifier, &referrer) {
         ret.to_string()
       } else {
@@ -60,10 +60,10 @@ impl Resolver {
     } else {
       specifier.into()
     };
-    let mut import_url = if resolved_url.starts_with("file://") {
-      let path = resolved_url.strip_prefix("file://").unwrap();
-      if !self.is_http_specifier {
-        let mut buf = PathBuf::from(self.specifier.trim_start_matches('.'));
+    let mut resolved_url = if im_resolved_url.starts_with("file://") {
+      let path = im_resolved_url.strip_prefix("file://").unwrap();
+      if !is_http_specifier(&self.specifier) {
+        let mut buf = PathBuf::from(self.specifier.to_owned());
         buf.pop();
         let path = diff_paths(&path, buf).unwrap().to_slash().unwrap().to_string();
         if !path.starts_with("./") && !path.starts_with("../") {
@@ -75,66 +75,58 @@ impl Resolver {
         ".".to_owned() + path
       }
     } else {
-      resolved_url.clone()
+      im_resolved_url.clone()
     };
-    let fixed_url: String = if resolved_url.starts_with("file://") {
-      ".".to_owned() + resolved_url.strip_prefix("file://").unwrap()
-    } else {
-      resolved_url.into()
-    };
-    let is_remote = is_http_url(&fixed_url);
 
-    if is_css_url(&import_url) {
-      if import_url.contains("?") {
-        import_url = import_url + "&module"
+    let is_css = is_css_specifier(&resolved_url);
+    if is_css {
+      if resolved_url.contains("?") {
+        resolved_url = resolved_url + "&module"
       } else {
-        import_url = import_url + "?module"
+        resolved_url = resolved_url + "?module"
       }
     }
 
-    if !is_remote {
+    if is_relative_specifier(&resolved_url) {
+      if !is_css {
+        if let Some(base_url) = self.import_map.as_ref().map(|im| im.base_url()) {
+          let base_path = base_url.path();
+          if !base_path.eq("/anonymous_import_map.json") {
+            let base_path_base64 = general_purpose::URL_SAFE_NO_PAD.encode(base_path.as_bytes());
+            if resolved_url.contains("?") {
+              resolved_url = format!("{}&im={}", resolved_url, base_path_base64);
+            } else {
+              resolved_url = format!("{}?im={}", resolved_url, base_path_base64);
+            }
+          }
+        }
+      }
       let mut v: Option<&String> = None;
       if let Some(version_map) = &self.version_map {
-        if version_map.contains_key(&fixed_url) {
-          v = version_map.get(&fixed_url)
+        let fullpath = referrer.join(&resolved_url).unwrap().path().to_owned();
+        if version_map.contains_key(&fullpath) {
+          v = version_map.get(&fullpath)
         } else {
           v = version_map.get("*")
         }
       };
       if let Some(v) = v {
-        if import_url.contains("?") {
-          import_url = format!("{}&v={}", import_url, v);
+        if resolved_url.contains("?") {
+          resolved_url = format!("{}&v={}", resolved_url, v);
         } else {
-          import_url = format!("{}?v={}", import_url, v);
+          resolved_url = format!("{}?v={}", resolved_url, v);
         }
       }
     }
 
     // update the dep graph
     self.deps.push(DependencyDescriptor {
-      specifier: fixed_url.clone(),
-      resolved_url: import_url.clone(),
+      specifier: specifier.to_owned(),
+      resolved_url: resolved_url.clone(),
       loc,
       dynamic,
     });
 
-    import_url
+    resolved_url
   }
-}
-
-pub fn is_http_url(url: &str) -> bool {
-  return url.starts_with("https://") || url.starts_with("http://");
-}
-
-pub fn is_css_url(url: &str) -> bool {
-  if is_http_url(url) {
-    let url = Url::from_str(url).unwrap();
-    let pathname = url.path();
-    return pathname.ends_with(".css");
-  }
-  return url.ends_with(".css");
-}
-
-fn is_false(value: &bool) -> bool {
-  return !*value;
 }
