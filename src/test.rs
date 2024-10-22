@@ -139,7 +139,7 @@ fn hmr() {
         refresh: Some(dev::RefreshOptions {
           runtime: "/@refresh.js".to_owned(),
         }),
-        jsx_source:Some(dev::JsxSourceOptions {
+        jsx_source: Some(dev::JsxSourceOptions {
           file_name: "/project/app.tsx".to_owned(),
         }),
         ..Default::default()
@@ -153,7 +153,7 @@ fn hmr() {
   assert!(code.contains("lineNumber: 6"));
   assert!(code.contains("columnNumber: 9"));
   assert!(code.contains("import __CREATE_HOT_CONTEXT__ from \"/@hmr.js\""));
-  assert!(code.contains("import.meta.hot = __CREATE_HOT_CONTEXT__(\"/app.tsx\")"));
+  assert!(code.contains("import.meta.hot = __CREATE_HOT_CONTEXT__(\"/app.tsx\", \"L2luZGV4Lmh0bWw\")"));
   assert!(code.contains("import { __REFRESH_RUNTIME__, __REFRESH__ } from \"/@refresh.js\""));
   assert!(code.contains("var prevRefreshReg = window.$RefreshReg$;"));
   assert!(code.contains("var prevRefreshSig = window.$RefreshSig$;"));

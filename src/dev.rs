@@ -1,5 +1,9 @@
+use crate::resolver::Resolver;
 use crate::swc_helpers::*;
+use base64::{engine::general_purpose, Engine as _};
 use serde::Deserialize;
+use std::cell::RefCell;
+use std::rc::Rc;
 use swc_common::{SyntaxContext, DUMMY_SP};
 use swc_ecmascript::ast::*;
 use swc_ecmascript::utils::quote_ident;
@@ -43,17 +47,18 @@ impl Default for DevOptions {
   }
 }
 
-pub struct DevFold {
-  pub specifier: String,
+pub struct Dev {
+  pub resolver: Rc<RefCell<Resolver>>,
   pub options: DevOptions,
 }
 
-impl Fold for DevFold {
+impl Fold for Dev {
   noop_fold_type!();
 
   fn fold_module_items(&mut self, module_items: Vec<ModuleItem>) -> Vec<ModuleItem> {
     let mut items = Vec::<ModuleItem>::new();
     let mut refresh = false;
+    let resolver = self.resolver.borrow();
 
     if let Some(hmr) = &self.options.hmr {
       // import __CREATE_HOT_CONTEXT__ from "HMR_RUNTIME"
@@ -69,6 +74,20 @@ impl Fold for DevFold {
         phase: ImportPhase::Evaluation,
       })));
       // import.meta.hot = __CREATE_HOT_CONTEXT__($specifier)
+      let mut args = vec![ExprOrSpread {
+        spread: None,
+        expr: Box::new(Expr::Lit(Lit::Str(new_str(&resolver.specifier)))),
+      }];
+      if let Some(base_url) = resolver.import_map.as_ref().map(|im| im.base_url()) {
+        let base_path = base_url.path();
+        if !base_path.eq("/anonymous_import_map.json") {
+          let base_path_base64 = general_purpose::URL_SAFE_NO_PAD.encode(base_path.as_bytes());
+          args.push(ExprOrSpread {
+            spread: None,
+            expr: Box::new(Expr::Lit(Lit::Str(new_str(&base_path_base64)))),
+          });
+        }
+      }
       items.push(ModuleItem::Stmt(Stmt::Expr(ExprStmt {
         span: DUMMY_SP,
         expr: Box::new(Expr::Assign(AssignExpr {
@@ -79,10 +98,7 @@ impl Fold for DevFold {
             span: DUMMY_SP,
             ctxt: SyntaxContext::empty(),
             callee: Callee::Expr(Box::new(ident_expr("__CREATE_HOT_CONTEXT__"))),
-            args: vec![ExprOrSpread {
-              spread: None,
-              expr: Box::new(Expr::Lit(Lit::Str(new_str(&self.specifier)))),
-            }],
+            args,
             type_args: None,
           })),
         })),
@@ -123,7 +139,7 @@ impl Fold for DevFold {
             callee: Callee::Expr(Box::new(simple_member_expr("__REFRESH_RUNTIME__", "register"))),
             args: vec![ExprOrSpread {
               spread: None,
-              expr: Box::new(Expr::Lit(Lit::Str(new_str(&self.specifier)))),
+              expr: Box::new(Expr::Lit(Lit::Str(new_str(&resolver.specifier)))),
             }],
             type_args: None,
           }),

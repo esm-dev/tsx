@@ -39,9 +39,6 @@ impl PrefreshPlugin {
       lib_local: Default::default(),
     }
   }
-}
-
-impl PrefreshPlugin {
   fn is_from_lib(&self, mem: &MemberExpr) -> bool {
     let Some(root) = mem.obj.as_ident() else {
       return false;

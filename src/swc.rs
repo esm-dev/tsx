@@ -1,4 +1,4 @@
-use crate::dev::{DevFold, DevOptions};
+use crate::dev::{Dev, DevOptions};
 use crate::error::{DiagnosticBuffer, ErrorBuffer};
 use crate::import_analyzer::ImportAnalyzer;
 use crate::resolver::Resolver;
@@ -172,8 +172,8 @@ impl SWC {
           resolver: resolver.clone(),
         },
         Optional::new(
-          DevFold {
-            specifier: self.specifier.clone(),
+          Dev {
+            resolver: resolver.clone(),
             options: options.dev.clone().unwrap_or_default(),
           },
           is_dev && !is_http_sepcifier

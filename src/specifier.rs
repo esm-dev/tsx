@@ -1,8 +1,6 @@
 use std::str::FromStr;
 use url::Url;
 
-
-
 pub fn is_http_specifier(url: &str) -> bool {
   return url.starts_with("https://") || url.starts_with("http://");
 }
