@@ -67,14 +67,28 @@ pub fn transform(specifier: &str, source: &str, swc_transform_options: JsValue) 
   let options: SWCTransformOptions = serde_wasm_bindgen::from_value(swc_transform_options).unwrap_or_default();
   let im = if let Some(import_map_raw) = options.import_map {
     let src = if let Some(src) = import_map_raw.as_object().unwrap().get("$src") {
-      src.as_str()
+      src.as_str().map(|s| {
+        if s.starts_with('/') {
+          "file://".to_owned() + s
+        } else {
+          s.to_owned()
+        }
+      })
     } else {
       None
     };
-    match import_map::parse_from_value(
-      Url::from_str(src.unwrap_or("file:///anonymous_import_map.json")).unwrap(),
-      import_map_raw,
-    ) {
+    let src = match Url::from_str(src.unwrap_or("file:///anonymous_import_map.json".to_owned()).as_str()) {
+      Ok(url) => url,
+      Err(e) => {
+        return Err(
+          JsError::new(
+            ("Invalid \"$src\" in import map, must be a valid `file://` URL but got ".to_owned() + e.to_string().as_str()).as_str(),
+          )
+          .into(),
+        );
+      }
+    };
+    match import_map::parse_from_value(src, import_map_raw) {
       Ok(import_map) => Some(import_map),
       Err(e) => {
         return Err(JsError::new(&e.to_string()).into());
@@ -96,8 +110,8 @@ pub fn transform(specifier: &str, source: &str, swc_transform_options: JsValue) 
     "es2023" => EsVersion::EsNext,
     "es2024" => EsVersion::EsNext,
     "esnext" => EsVersion::EsNext,
-    _ => {
-      return Err(JsError::new("Invalid target").into());
+    t => {
+      return Err(JsError::new(("Invalid target: ".to_owned() + t).as_str()).into());
     }
   };
   let module = match SWC::parse(specifier, source) {
