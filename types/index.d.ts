@@ -81,6 +81,8 @@ export function transform(options: { filename: string; code: string } & Transfor
 export function initSync(module: BufferSource | WebAssembly.Module): { memory: WebAssembly.Memory };
 
 /** If `module_or_path` is {RequestInfo} or {URL}, makes a request and for everything else, calls `WebAssembly.instantiate` directly. */
-export default function init(
+export function init(
   module_or_path?: RequestInfo | URL | Response | BufferSource | WebAssembly.Module,
 ): Promise<{ memory: WebAssembly.Memory }>;
+
+export { init as default };
