@@ -61,7 +61,7 @@ impl Fold for Dev {
     let resolver = self.resolver.borrow();
 
     if let Some(hmr) = &self.options.hmr {
-      // import __CREATE_HOT_CONTEXT__ from "HMR_RUNTIME"
+      // import __CREATE_HOT_CONTEXT__ from "{HMR_RUNTIME_URL}"
       items.push(ModuleItem::ModuleDecl(ModuleDecl::Import(ImportDecl {
         span: DUMMY_SP,
         specifiers: vec![ImportSpecifier::Default(ImportDefaultSpecifier {
@@ -117,7 +117,7 @@ impl Fold for Dev {
         }
       }
       if refresh {
-        // import { __REFRESH_RUNTIME__, __REFRESH__ } from "REFRESH_RUNTIME"
+        // import { __REFRESH_RUNTIME__, __REFRESH__ } from "{REFRESH_RUNTIME_URL}"
         items.push(ModuleItem::ModuleDecl(ModuleDecl::Import(ImportDecl {
           span: DUMMY_SP,
           specifiers: vec![import_name("__REFRESH_RUNTIME__"), import_name("__REFRESH__")],
@@ -146,6 +146,30 @@ impl Fold for Dev {
         ));
         // window.$RefreshSig$ = __REFRESH_RUNTIME__.sign
         items.push(window_assign("$RefreshSig$", simple_member_expr("__REFRESH_RUNTIME__", "sign")));
+      } else {
+        let mut has_react_dom_import = false;
+        for item in &resolver.deps {
+          if item.specifier.eq("react-dom") || item.specifier.starts_with("react-dom/") {
+            has_react_dom_import = true;
+            break;
+          }
+        }
+        // we need to import "REFRESH_RUNTIME" before ReactDom starts to render the app,
+        // to make sure that the refresh runtime is hooked.
+        if has_react_dom_import {
+          // import "{REFRESH_RUNTIME_URL}"
+          items.insert(
+            0,
+            ModuleItem::ModuleDecl(ModuleDecl::Import(ImportDecl {
+              span: DUMMY_SP,
+              specifiers: vec![],
+              src: Box::new(new_str(&refresh_options.runtime)),
+              type_only: false,
+              with: None,
+              phase: ImportPhase::Evaluation,
+            })),
+          );
+        }
       }
     }
 

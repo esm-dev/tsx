@@ -166,6 +166,27 @@ fn hmr() {
   assert!(code.contains("window.$RefreshReg$ = prevRefreshReg"));
   assert!(code.contains("window.$RefreshSig$ = prevRefreshSig;"));
   assert!(code.contains("import.meta.hot.accept(__REFRESH__)"));
+
+  let source = r#"
+    import { createRoot } from "react-dom"
+    import App from "./App.tsx"
+    createRoot(document.getElementById("app")).render(<App />)
+  "#;
+  let (code, _, _) = transform(
+    "/main.tsx",
+    source,
+    &EmitOptions {
+      dev: Some(DevOptions {
+        refresh: Some(dev::RefreshOptions {
+          runtime: "/@refresh.js".to_owned(),
+        }),
+        ..Default::default()
+      }),
+      jsx_import_source: Some("https://esm.sh/react@18".to_owned()),
+      ..Default::default()
+    },
+  );
+  assert!(code.starts_with("import \"/@refresh.js\""));
 }
 
 #[test]
