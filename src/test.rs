@@ -221,7 +221,7 @@ fn source_map() {
       ..Default::default()
     },
   );
-  assert!(code.contains("//# sourceMappingURL=data:application/json;base64,"));
+  assert!(code.contains("//# sourceMappingURL=data:application/json;charset=utf-8;base64,"));
   assert!(source_map.is_none());
 
   let (code, source_map, _) = transform(
@@ -232,6 +232,7 @@ fn source_map() {
       ..Default::default()
     },
   );
-  assert!(!code.contains("//# sourceMappingURL=data:application/json;base64,"));
+  assert!(!code.contains("//# sourceMappingURL="));
   assert!(source_map.is_some());
+  assert!(source_map.unwrap().contains("\"sourcesContent\":[\"\\n    const foo:string = \\\"bar\\\"\\n  \"]"));
 }

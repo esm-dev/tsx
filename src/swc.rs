@@ -7,11 +7,13 @@ use crate::swc_jsx_src::jsx_src;
 use crate::swc_prefresh::swc_prefresh;
 use base64::{engine::general_purpose, Engine as _};
 use std::cell::RefCell;
+use std::fmt;
 use std::path::Path;
 use std::rc::Rc;
 use swc_common::comments::SingleThreadedComments;
 use swc_common::errors::{Handler, HandlerFlags};
-use swc_common::{chain, FileName, Globals, Mark, SourceMap};
+use swc_common::source_map::{SourceMap, SourceMapGenConfig};
+use swc_common::{chain, FileName, Globals, Mark};
 use swc_ecma_transforms::optimization::simplify::dce;
 use swc_ecma_transforms::pass::Optional;
 use swc_ecma_transforms::proposals::decorators;
@@ -44,6 +46,28 @@ impl Default for EmitOptions {
   }
 }
 
+#[derive(Debug)]
+pub struct EmitError {
+  pub message: String,
+}
+
+impl fmt::Display for EmitError {
+  fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+    f.write_str(&self.message)
+  }
+}
+
+pub struct SourceMapGenOptions {}
+
+impl SourceMapGenConfig for SourceMapGenOptions {
+  fn file_name_to_source(&self, f: &FileName) -> String {
+    f.to_string()
+  }
+  fn inline_sources_content(&self, f: &FileName) -> bool {
+    f.is_real()
+  }
+}
+
 #[derive(Clone)]
 pub struct SWC {
   pub specifier: String,
@@ -62,7 +86,6 @@ impl SWC {
     let input = StringInput::from(&*source_file);
     let comments = SingleThreadedComments::default();
     let lexer = lexer::Lexer::new(syntax, EsVersion::EsNext, input, Some(&comments));
-    let mut parser = Parser::new_from(lexer);
     let handler = Handler::with_emitter_and_flags(
       Box::new(error_buffer.clone()),
       HandlerFlags {
@@ -72,7 +95,7 @@ impl SWC {
       },
     );
     let sm = &source_map;
-    let module = parser.parse_module().map_err(move |err| {
+    let module = Parser::new_from(lexer).parse_module().map_err(move |err| {
       let mut diagnostic = err.into_diagnostic(&handler);
       diagnostic.emit();
       DiagnosticBuffer::from_error_buffer(error_buffer, |span| sm.lookup_char_pos(span.lo))
@@ -87,7 +110,7 @@ impl SWC {
   }
 
   /// Transpile a JS/TS module.
-  pub fn transform(self, resolver: Rc<RefCell<Resolver>>, options: &EmitOptions) -> Result<(String, Option<String>), DiagnosticBuffer> {
+  pub fn transform(self, resolver: Rc<RefCell<Resolver>>, options: &EmitOptions) -> Result<(String, Option<String>), EmitError> {
     swc_common::GLOBALS.set(&Globals::new(), || {
       let top_level_mark = Mark::new();
       let unresolved_mark = Mark::new();
@@ -188,7 +211,7 @@ impl SWC {
       );
 
       // emit code
-      let (mut code, map) = self.emit(visitor, options);
+      let (mut code, map) = self.emit(visitor, options)?;
 
       // resolve jsx runtime path defined by `// @jsxImportSource` annotation
       let mut jsx_runtime = None;
@@ -208,14 +231,14 @@ impl SWC {
   }
 
   /// Emit code with a given set of visitor.
-  fn emit<T: Fold>(&self, mut visitor: T, options: &EmitOptions) -> (String, Option<String>) {
+  fn emit<T: Fold>(&self, mut visitor: T, options: &EmitOptions) -> Result<(String, Option<String>), EmitError> {
     let eol = "\n";
     let program = Program::Module(self.module.clone());
     let program = helpers::HELPERS.set(&helpers::Helpers::new(false), || program.fold_with(&mut visitor));
     let mut js_buf = Vec::new();
-    let mut map_buf = Vec::new();
+    let mut mappings = Vec::new();
     let writer = if options.source_map.is_some() {
-      JsWriter::new(self.source_map.clone(), eol, &mut js_buf, Some(&mut map_buf))
+      JsWriter::new(self.source_map.clone(), eol, &mut js_buf, Some(&mut mappings))
     } else {
       JsWriter::new(self.source_map.clone(), eol, &mut js_buf, None)
     };
@@ -225,26 +248,42 @@ impl SWC {
       cm: self.source_map.clone(),
       wr: writer,
     };
-    program.emit_with(&mut emitter).expect("failed to emit code");
+    if let Err(error) = program.emit_with(&mut emitter) {
+      return Err(EmitError {
+        message: format!("failed to emit code: {}", error),
+      });
+    }
 
     let js = String::from_utf8(js_buf).expect("invalid utf8 character detected");
     if let Some(sm) = &options.source_map {
-      let mut source_map = Vec::new();
-      self
+      let mut source_map_json = Vec::new();
+      if let Err(error) = self
         .source_map
-        .build_source_map_from(&mut map_buf, None)
-        .to_writer(&mut source_map)
-        .expect("failed to build source map");
+        .build_source_map_with_config(&mut mappings, None, SourceMapGenOptions {})
+        .to_writer(&mut source_map_json)
+      {
+        return Err(EmitError {
+          message: format!("failed to build source map: {}", error),
+        });
+      }
       if sm.eq("inline") {
         let mut src = js;
-        src.push_str("\n//# sourceMappingURL=data:application/json;base64,");
-        src.push_str(&general_purpose::STANDARD.encode(source_map));
-        (src, None)
+        src.push_str("\n//# sourceMappingURL=data:application/json;charset=utf-8;base64,");
+        src.push_str(&general_purpose::STANDARD.encode(source_map_json));
+        Ok((src, None))
       } else {
-        (js, Some(String::from_utf8(source_map).expect("invalid utf8 character detected")))
+        let source_map_json_string = match String::from_utf8(source_map_json) {
+          Ok(str) => str,
+          Err(error) => {
+            return Err(EmitError {
+              message: format!("failed to convert source map to string: {}", error),
+            });
+          }
+        };
+        Ok((js, Some(source_map_json_string)))
       }
     } else {
-      (js, None)
+      Ok((js, None))
     }
   }
 }
