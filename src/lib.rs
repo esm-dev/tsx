@@ -77,14 +77,11 @@ pub fn transform(specifier: &str, source: &str, swc_transform_options: JsValue) 
     } else {
       None
     };
-    let src = match Url::from_str(src.unwrap_or("file:///anonymous_import_map.json".to_owned()).as_str()) {
+    let src = match Url::from_str(src.clone().unwrap_or("file:///anonymous_import_map.json".to_owned()).as_str()) {
       Ok(url) => url,
-      Err(e) => {
+      Err(_) => {
         return Err(
-          JsError::new(
-            ("Invalid \"$src\" in import map, must be a valid `file://` URL but got ".to_owned() + e.to_string().as_str()).as_str(),
-          )
-          .into(),
+          JsError::new(("Invalid \"$src\" in import map, must be a valid URL but got ".to_owned() + src.unwrap().as_str()).as_str()).into(),
         );
       }
     };
