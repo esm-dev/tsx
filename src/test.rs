@@ -66,6 +66,7 @@ fn typescript() {
 #[test]
 fn module_analyzer() {
   let source = r#"
+    import "/@hmr"
     import React from "react"
     import { jsx } from "react/jsx-runtime"
     import { foo } from "~/foo.ts"
@@ -77,13 +78,14 @@ fn module_analyzer() {
     new Worker("https://esm.sh/asksomeonelse")
   "#;
   let (code, _, _) = transform("/foo/bar/index.js", source, &EmitOptions::default());
-  assert!(code.contains("\"https://esm.sh/react@18\""));
-  assert!(code.contains("\"https://esm.sh/react@18/jsx-runtime\""));
-  assert!(code.contains("\"../../foo.ts?im=L2luZGV4Lmh0bWw&v=2.0.0\""));
-  assert!(code.contains("\"https://esm.sh/preact@10.13.0\""));
-  assert!(code.contains("\"https://esm.sh/preact@10.13.0?dev\""));
-  assert!(code.contains("\"./Layout.tsx?im=L2luZGV4Lmh0bWw&v=1.0.0\""));
-  assert!(code.contains("\"../../style/app.css?module&v=1.0.0\""));
+  assert!(code.contains("import \"/@hmr\""));
+  assert!(code.contains("from \"https://esm.sh/react@18\""));
+  assert!(code.contains("from \"https://esm.sh/react@18/jsx-runtime\""));
+  assert!(code.contains("from \"/foo.ts?im=L2luZGV4Lmh0bWw&v=2.0.0\""));
+  assert!(code.contains("import \"https://esm.sh/preact@10.13.0\""));
+  assert!(code.contains("import \"https://esm.sh/preact@10.13.0?dev\""));
+  assert!(code.contains("from \"./Layout.tsx?im=L2luZGV4Lmh0bWw&v=1.0.0\""));
+  assert!(code.contains("import \"/style/app.css?module&v=1.0.0\""));
   assert!(code.contains("import(\"https://esm.sh/asksomeonelse\")"));
   assert!(code.contains("new Worker(\"https://esm.sh/asksomeonelse\")"));
 }

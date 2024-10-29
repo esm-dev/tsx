@@ -1,5 +1,5 @@
 use crate::import_map::ImportMap;
-use crate::specifier::{is_css_specifier, is_http_specifier, is_relative_specifier};
+use crate::specifier::{is_css_specifier, is_http_specifier,has_file_extension};
 use base64::{engine::general_purpose, Engine as _};
 use path_slash::PathBufExt;
 use pathdiff::diff_paths;
@@ -61,18 +61,23 @@ impl Resolver {
       specifier.into()
     };
     let mut resolved_url = if im_resolved_url.starts_with("file://") {
-      let path = im_resolved_url.strip_prefix("file://").unwrap();
+      let pathname = im_resolved_url.strip_prefix("file://").unwrap();
       if !is_http_specifier(&self.specifier) {
         let mut buf = PathBuf::from(self.specifier.to_owned());
         buf.pop();
-        let path = diff_paths(&path, buf).unwrap().to_slash().unwrap().to_string();
-        if !path.starts_with("./") && !path.starts_with("../") {
+        let path = diff_paths(&pathname, buf).unwrap().to_slash().unwrap().to_string();
+        let rel_path = if !path.starts_with("./") && !path.starts_with("../") {
           "./".to_owned() + path.as_str()
         } else {
           path
+        };
+        if rel_path.len() < pathname.len() {
+          rel_path
+        } else {
+          pathname.to_owned()
         }
       } else {
-        ".".to_owned() + path
+        pathname.to_owned()
       }
     } else {
       im_resolved_url.clone()
@@ -87,7 +92,7 @@ impl Resolver {
       }
     }
 
-    if is_relative_specifier(&resolved_url) {
+    if !is_http_specifier(&resolved_url) && has_file_extension(&resolved_url) {
       if !is_css {
         if let Some(base_url) = self.import_map.as_ref().map(|im| im.base_url()) {
           let base_path = base_url.path();
