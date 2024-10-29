@@ -78,14 +78,23 @@ pub struct SWC {
 
 impl SWC {
   /// Parse the source code of a JS/TS module into an AST.
-  pub fn parse(specifier: &str, source: &str) -> Result<Self, DiagnosticBuffer> {
+  pub fn parse(specifier: &str, source: &str, lang: Option<String>) -> Result<Self, DiagnosticBuffer> {
+   let syntax = if let Some(lang) = lang {
+      match lang.as_str() {
+        "ts" => Syntax::Typescript(get_ts_config(false)),
+        "tsx" => Syntax::Typescript(get_ts_config(true)),
+        "jsx" => Syntax::Es(get_es_config(true)),
+        _ => Syntax::Es(get_es_config(false)),
+      }
+    } else {
+      get_syntax_from_filename(specifier)
+    };
     let source_map = SourceMap::default();
     let source_file = source_map.new_source_file(FileName::Real(Path::new(specifier).to_path_buf()).into(), source.into());
-    let error_buffer = ErrorBuffer::new(specifier);
-    let syntax = get_syntax(specifier);
     let input = StringInput::from(&*source_file);
     let comments = SingleThreadedComments::default();
     let lexer = lexer::Lexer::new(syntax, EsVersion::EsNext, input, Some(&comments));
+    let error_buffer = ErrorBuffer::new(specifier);
     let handler = Handler::with_emitter_and_flags(
       Box::new(error_buffer.clone()),
       HandlerFlags {
@@ -308,8 +317,8 @@ fn get_ts_config(tsx: bool) -> TsSyntax {
   }
 }
 
-fn get_syntax(specifier: &str) -> Syntax {
-  let lang = specifier
+fn get_syntax_from_filename(filename: &str) -> Syntax {
+  let lang = filename
     .split(|c| c == '?' || c == '#')
     .next()
     .unwrap()

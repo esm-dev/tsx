@@ -17,7 +17,7 @@ fn transform(specifer: &str, source: &str, options: &EmitOptions) -> (String, Op
   let mut version_map: HashMap<String, String> = HashMap::new();
   version_map.insert("/foo.ts".into(), "2.0.0".into());
   version_map.insert("*".into(), "1.0.0".into());
-  let module = SWC::parse(specifer, source).expect("could not parse module");
+  let module = SWC::parse(specifer, source, None).expect("could not parse module");
   let resolver = Rc::new(RefCell::new(Resolver::new(specifer, Some(importmap), Some(version_map))));
   let (code, source_map) = module.transform(resolver.clone(), options).unwrap();
   println!("{}", code);
@@ -234,5 +234,7 @@ fn source_map() {
   );
   assert!(!code.contains("//# sourceMappingURL="));
   assert!(source_map.is_some());
-  assert!(source_map.unwrap().contains("\"sourcesContent\":[\"\\n    const foo:string = \\\"bar\\\"\\n  \"]"));
+  assert!(source_map
+    .unwrap()
+    .contains("\"sourcesContent\":[\"\\n    const foo:string = \\\"bar\\\"\\n  \"]"));
 }

@@ -33,29 +33,44 @@ export interface DevOptions {
 
 /** Transform options. */
 export interface TransformOptions {
+  /** The code language, default is using the file extension. */
+  lang?: "ts" | "tsx" | "js" | "jsx";
+  /** The transform target, default is "esnext". */
+  target?: "es2015" | "es2016" | "es2017" | "es2018" | "es2019" | "es2020" | "es2021" | "es2022" | "es2023" | "es2024" | "esnext";
   /** The import map, pass it if the browser does not support import maps. */
   importMap?: ImportMap;
   /**
    * The jsx import source, default is "react".
    *
-   * Alternative you can set it by adding "@jsxImportSource" entry in the import map.
+   * Alternative you can set it by adding "@jsxRuntime" entry in the import map.
    * ```json
    * {
-   *  "imports": {
-   *   "@jsxImportSource": "https://esm.sh/react"
+   *   "importMap": {
+   *     "imports": { "@jsxRuntime": "https://esm.sh/react" }
+   *   }
    * }
    * ```
    */
   jsxImportSource?: string;
-  /** The transform target, default is "esnext". */
-  target?: "es2015" | "es2016" | "es2017" | "es2018" | "es2019" | "es2020" | "es2021" | "es2022" | "es2023" | "es2024" | "esnext";
   /** strip unused code, default is disabled. */
   treeShaking?: boolean;
   /** create source map, default is disabled. */
   sourceMap?: "inline" | "external";
   /** development mode, default is disabled. */
   dev?: DevOptions;
-  /** The version map for the module resolver. */
+  /**
+   * The version map for the module resolver.
+   * ```json
+   * {
+   *   "versionMap": {
+   *     "*": "1.0.0",
+   *     "/src/main.tsx": "1.0.1"
+   *   }
+   * }
+   * - "*" is the default version for all modules, e.g. `/src/App.tsx?v=1.0.0`.
+   * - "/src/main.tsx" is the version for the specific module, e.g. `/src/main.tsx?v=1.0.1`.
+   * - http imports will ignore the version map.
+   */
   versionMap?: Record<string, string>;
 }
 

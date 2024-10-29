@@ -28,6 +28,7 @@ use wasm_bindgen::prelude::*;
 #[derive(Deserialize)]
 #[serde(deny_unknown_fields, rename_all = "camelCase")]
 pub struct SWCTransformOptions {
+  pub lang: Option<String>,
   pub source_map: Option<String>,
   pub import_map: Option<serde_json::Value>,
   pub dev: Option<DevOptions>,
@@ -41,6 +42,7 @@ pub struct SWCTransformOptions {
 impl Default for SWCTransformOptions {
   fn default() -> Self {
     Self {
+      lang: None,
       source_map: None,
       import_map: None,
       dev: None,
@@ -111,7 +113,7 @@ pub fn transform(specifier: &str, source: &str, swc_transform_options: JsValue) 
       return Err(JsError::new(("Invalid target: ".to_owned() + t).as_str()).into());
     }
   };
-  let module = match SWC::parse(specifier, source) {
+  let module = match SWC::parse(specifier, source, options.lang) {
     Ok(ret) => ret,
     Err(err) => {
       return Err(JsError::new(&err.to_string()).into());
