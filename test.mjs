@@ -32,8 +32,8 @@ async function test() {
   if (!code.includes(`import { createRoot } from "https://esm.sh/react-dom@18/client"`)) {
     throw new Error("'react-dom/client' not resolved");
   }
-  if (!code.includes(`import App from "./App.tsx?im=L2luZGV4Lmh0bWw"`)) {
-    throw new Error("'./App.tsx' not resolved");
+  if (!code.includes(`import App from "/App.tsx?im=L2luZGV4Lmh0bWw"`)) {
+    throw new Error("'/App.tsx' not resolved");
   }
   if (!code.includes(`_jsx(App`)) {
     throw new Error("jsx not transformed");
