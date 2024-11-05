@@ -1,11 +1,11 @@
-# esm-tsx
+# @esm.sh/tsx
 
-A TS/JSX transpiler for esm.sh playground written in Rust, powered by [swc](https://swc.rs).
+A TSX transpiler for esm.sh services, powered by [swc](https://swc.rs).
 
 ## Usage
 
 ```js
-import init, { transform } from "https://esm.sh/esm-tsx";
+import init, { transform } from "https://esm.sh/@esm.sh/tsx";
 
 // initialize the wasm module
 await init();

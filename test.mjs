@@ -1,9 +1,9 @@
 import { readFile } from "node:fs/promises";
-import init, { transform } from "./pkg/esm_tsx.js";
+import init, { transform } from "./pkg/tsx.js";
 
 async function load() {
   const wasmData = await readFile(
-    new URL("./pkg/esm_tsx_bg.wasm", import.meta.url),
+    new URL("./pkg/tsx_bg.wasm", import.meta.url),
   );
   await init({ module_or_path: wasmData });
 

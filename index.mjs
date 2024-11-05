@@ -1,4 +1,4 @@
-import initWasm, { initSync as initWasmSync, transform as swc } from "./pkg/esm_tsx.js";
+import initWasm, { initSync as initWasmSync, transform as swc } from "./pkg/tsx.js";
 
 export function transform({ filename, code, ...options }) {
   if (typeof filename !== "string" || filename === "") {
@@ -22,7 +22,7 @@ export function initSync(module) {
 
 export async function init(module_or_path) {
   if (!module_or_path && globalThis.Deno && modUrl.startsWith("file://")) {
-    const wasmUrl = new URL("./pkg/esm_tsx_bg.wasm", modUrl);
+    const wasmUrl = new URL("./pkg/tsx_bg.wasm", modUrl);
     const wasmBytes = await Deno.readFile(wasmUrl);
     initWasmSync({ module: wasmBytes });
     return;

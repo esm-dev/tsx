@@ -1,7 +1,7 @@
 {
-  "name": "esm-tsx",
-  "version": "1.3.1",
-  "description": "A TS/JSX transpiler for esm.sh playground written in Rust.",
+  "name": "@esm.sh/tsx",
+  "version": "1.0.0",
+  "description": "A TSX transpiler for esm.sh services.",
   "type": "module",
   "module": "./index.mjs",
   "types": "./type/index.d.ts",
@@ -9,8 +9,8 @@
   "files": [
     "./types/",
     "./index.mjs",
-    "./pkg/esm_tsx.js",
-    "./pkg/esm_tsx_bg.wasm"
+    "./pkg/tsx.js",
+    "./pkg/tsx_bg.wasm"
   ],
   "scripts": {
     "prepublishOnly": "npm run test && npm run test:wasm",
