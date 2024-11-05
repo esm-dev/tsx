@@ -1,4 +1,4 @@
-# @esm.sh/tsx
+# tsx
 
 A TSX transpiler for esm.sh services, powered by [swc](https://swc.rs).
 
