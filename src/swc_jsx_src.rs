@@ -2,11 +2,11 @@
 use swc_common::{sync::Lrc, SourceMap, DUMMY_SP};
 use swc_ecmascript::ast::*;
 use swc_ecmascript::utils::quote_ident;
-use swc_ecmascript::visit::{as_folder, noop_visit_mut_type, Fold, VisitMut, VisitMutWith};
+use swc_ecmascript::visit::{noop_visit_mut_type, visit_mut_pass, VisitMut, VisitMutWith};
 
 /// `@babel/plugin-transform-react-jsx-source`
-pub fn jsx_src(cm: Lrc<SourceMap>, file_name: Option<String>) -> impl Fold + VisitMut {
-  as_folder(JsxSrc { cm, file_name })
+pub fn jsx_src(cm: Lrc<SourceMap>, file_name: Option<String>) -> impl Pass {
+  visit_mut_pass(JsxSrc { cm, file_name })
 }
 
 #[derive(Clone)]

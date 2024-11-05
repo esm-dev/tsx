@@ -12,18 +12,18 @@ use std::path::Path;
 use std::rc::Rc;
 use swc_common::comments::SingleThreadedComments;
 use swc_common::errors::{Handler, HandlerFlags};
+use swc_common::pass::Optional;
 use swc_common::source_map::{SourceMap, SourceMapGenConfig};
-use swc_common::{chain, FileName, Globals, Mark};
+use swc_common::{FileName, Globals, Mark};
 use swc_ecma_transforms::optimization::simplify::dce;
-use swc_ecma_transforms::pass::Optional;
 use swc_ecma_transforms::proposals::decorators;
 use swc_ecma_transforms::typescript::{tsx, typescript};
 use swc_ecma_transforms::{fixer, helpers, hygiene, react};
-use swc_ecmascript::ast::{EsVersion, Module, Program};
+use swc_ecmascript::ast::{EsVersion, Module, Pass, Program};
 use swc_ecmascript::codegen::{text_writer::JsWriter, Config, Emitter, Node};
 use swc_ecmascript::parser::{lexer, Parser};
 use swc_ecmascript::parser::{EsSyntax, StringInput, Syntax, TsSyntax};
-use swc_ecmascript::visit::{Fold, FoldWith};
+use swc_ecmascript::visit::fold_pass;
 
 /// Options for transpiling a module.
 pub struct EmitOptions {
@@ -70,16 +70,15 @@ impl SourceMapGenConfig for SourceMapGenOptions {
 
 #[derive(Clone)]
 pub struct SWC {
-  pub specifier: String,
   pub module: Module,
   pub source_map: Rc<SourceMap>,
   pub comments: SingleThreadedComments,
 }
 
 impl SWC {
-  /// Parse the source code of a JS/TS module into an AST.
+  /// Parse a module from a string.
   pub fn parse(specifier: &str, source: &str, lang: Option<String>) -> Result<Self, DiagnosticBuffer> {
-   let syntax = if let Some(lang) = lang {
+    let syntax = if let Some(lang) = lang {
       match lang.as_str() {
         "ts" => Syntax::Typescript(get_ts_config(false)),
         "tsx" => Syntax::Typescript(get_ts_config(true)),
@@ -111,116 +110,17 @@ impl SWC {
     })?;
 
     Ok(SWC {
-      specifier: specifier.into(),
       module,
       source_map: Rc::new(source_map),
       comments,
     })
   }
 
-  /// Transpile a JS/TS module.
+  /// Transform the module to JavaScript and optionally generate a source map.
   pub fn transform(self, resolver: Rc<RefCell<Resolver>>, options: &EmitOptions) -> Result<(String, Option<String>), EmitError> {
     swc_common::GLOBALS.set(&Globals::new(), || {
-      let top_level_mark = Mark::new();
-      let unresolved_mark = Mark::new();
-      let is_ts = self.specifier.ends_with(".ts") || self.specifier.ends_with(".tsx") || self.specifier.ends_with(".mts");
-      let is_jsx = self.specifier.ends_with(".tsx") || self.specifier.ends_with(".jsx");
-      let is_http_sepcifier = is_http_specifier(&self.specifier);
-      let is_dev = options.dev.is_some();
-      let dev_options = options.dev.clone().unwrap_or_default();
-      let jsx_options = if let Some(jsx_import_source) = &options.jsx_import_source {
-        react::Options {
-          runtime: Some(react::Runtime::Automatic),
-          import_source: Some(jsx_import_source.to_owned()),
-          development: Some(is_dev),
-          ..Default::default()
-        }
-      } else {
-        react::Options {
-          development: Some(is_dev),
-          ..Default::default()
-        }
-      };
-      let visitor = chain!(
-        swc_ecma_transforms::resolver(unresolved_mark, top_level_mark, is_ts),
-        // todo: support the new decorators proposal
-        decorators::decorators(decorators::Config {
-          legacy: true,
-          emit_metadata: false,
-          use_define_for_class_fields: false,
-        }),
-        Optional::new(typescript::strip(unresolved_mark, top_level_mark), is_ts && !is_jsx),
-        Optional::new(
-          tsx(
-            self.source_map.clone(),
-            typescript::Config::default(),
-            typescript::TsxConfig {
-              pragma: jsx_options.pragma.clone(),
-              pragma_frag: jsx_options.pragma_frag.clone(),
-            },
-            Some(&self.comments),
-            unresolved_mark,
-            top_level_mark
-          ),
-          is_ts && is_jsx
-        ),
-        Optional::new(
-          jsx_src(
-            self.source_map.clone(),
-            dev_options.jsx_source.as_ref().map(|opts| opts.file_name.clone()),
-          ),
-          dev_options.jsx_source.is_some()
-        ),
-        Optional::new(react::jsx_self(is_dev), is_jsx),
-        Optional::new(
-          react::refresh(
-            is_dev,
-            Some(react::RefreshOptions {
-              refresh_reg: "$RefreshReg$".into(),
-              refresh_sig: "$RefreshSig$".into(),
-              emit_full_signatures: false,
-            }),
-            self.source_map.clone(),
-            Some(&self.comments),
-            top_level_mark
-          ),
-          !is_http_sepcifier && (dev_options.refresh.is_some() || dev_options.prefresh.is_some())
-        ),
-        Optional::new(swc_prefresh(&self.specifier), !is_http_sepcifier && dev_options.prefresh.is_some()),
-        Optional::new(
-          react::jsx(
-            self.source_map.clone(),
-            Some(&self.comments),
-            jsx_options,
-            top_level_mark,
-            unresolved_mark,
-          ),
-          is_jsx
-        ),
-        Optional::new(react::display_name(), is_jsx),
-        Optional::new(react::pure_annotations(Some(&self.comments)), is_jsx),
-        fixer::paren_remover(Some(&self.comments)),
-        ImportAnalyzer {
-          resolver: resolver.clone(),
-        },
-        Optional::new(
-          Dev {
-            resolver: resolver.clone(),
-            options: options.dev.clone().unwrap_or_default(),
-          },
-          is_dev && !is_http_sepcifier
-        ),
-        helpers::inject_helpers(top_level_mark),
-        Optional::new(dce::dce(Default::default(), unresolved_mark), options.tree_shaking),
-        hygiene::hygiene_with_config(hygiene::Config {
-          top_level_mark,
-          ..Default::default()
-        }),
-        fixer(Some(&self.comments)),
-      );
-
-      // emit code
-      let (mut code, map) = self.emit(visitor, options)?;
+      // transpile code
+      let (mut code, map) = self.emit(resolver.clone(), options)?;
 
       // resolve jsx runtime path defined by `// @jsxImportSource` annotation
       let mut jsx_runtime = None;
@@ -239,17 +139,124 @@ impl SWC {
     })
   }
 
-  /// Emit code with a given set of visitor.
-  fn emit<T: Fold>(&self, mut visitor: T, options: &EmitOptions) -> Result<(String, Option<String>), EmitError> {
-    let eol = "\n";
+  fn build_pass<'a>(&'a self, resolver: Rc<RefCell<Resolver>>, options: &EmitOptions) -> impl Pass + 'a {
+    let top_level_mark = Mark::new();
+    let unresolved_mark = Mark::new();
+    let specifier = resolver.borrow().specifier.clone();
+    let is_ts = specifier.ends_with(".ts") || specifier.ends_with(".tsx") || specifier.ends_with(".mts");
+    let is_jsx = specifier.ends_with(".tsx") || specifier.ends_with(".jsx");
+    let is_http_sepcifier = is_http_specifier(&specifier);
+    let is_dev = options.dev.is_some();
+    let dev_options = options.dev.clone().unwrap_or_default();
+    let jsx_options = if let Some(jsx_import_source) = &options.jsx_import_source {
+      react::Options {
+        runtime: Some(react::Runtime::Automatic),
+        import_source: Some(jsx_import_source.to_owned()),
+        development: Some(is_dev),
+        ..Default::default()
+      }
+    } else {
+      react::Options {
+        development: Some(is_dev),
+        ..Default::default()
+      }
+    };
+
+    // https://github.com/swc-project/swc/pull/9680
+    (
+      swc_ecma_transforms::resolver(unresolved_mark, top_level_mark, is_ts),
+      // todo: support the new decorators proposal
+      decorators::decorators(decorators::Config {
+        legacy: true,
+        emit_metadata: false,
+        use_define_for_class_fields: false,
+      }),
+      Optional::new(typescript::strip(unresolved_mark, top_level_mark), is_ts && !is_jsx),
+      Optional::new(
+        tsx(
+          self.source_map.clone(),
+          typescript::Config::default(),
+          typescript::TsxConfig {
+            pragma: jsx_options.pragma.clone(),
+            pragma_frag: jsx_options.pragma_frag.clone(),
+          },
+          Some(&self.comments),
+          unresolved_mark,
+          top_level_mark,
+        ),
+        is_ts && is_jsx,
+      ),
+      // jsx features passes
+      (
+        Optional::new(
+          jsx_src(
+            self.source_map.clone(),
+            dev_options.jsx_source.as_ref().map(|opts| opts.file_name.clone()),
+          ),
+          dev_options.jsx_source.is_some(),
+        ),
+        Optional::new(react::jsx_self(is_dev), is_jsx),
+        Optional::new(
+          react::refresh(
+            is_dev,
+            Some(react::RefreshOptions {
+              refresh_reg: "$RefreshReg$".into(),
+              refresh_sig: "$RefreshSig$".into(),
+              emit_full_signatures: false,
+            }),
+            self.source_map.clone(),
+            Some(&self.comments),
+            top_level_mark,
+          ),
+          !is_http_sepcifier && (dev_options.refresh.is_some() || dev_options.prefresh.is_some()),
+        ),
+        Optional::new(swc_prefresh(&specifier), !is_http_sepcifier && dev_options.prefresh.is_some()),
+        Optional::new(
+          react::jsx(
+            self.source_map.clone(),
+            Some(&self.comments),
+            jsx_options,
+            top_level_mark,
+            unresolved_mark,
+          ),
+          is_jsx,
+        ),
+        Optional::new(react::display_name(), is_jsx),
+        Optional::new(react::pure_annotations(Some(&self.comments)), is_jsx),
+      ),
+      fold_pass(ImportAnalyzer {
+        resolver: resolver.clone(),
+      }),
+      Optional::new(
+        fold_pass(Dev {
+          resolver: resolver.clone(),
+          options: options.dev.clone().unwrap_or_default(),
+        }),
+        is_dev && !is_http_sepcifier,
+      ),
+      // optimization passes
+      (
+        fixer::paren_remover(Some(&self.comments)),
+        helpers::inject_helpers(top_level_mark),
+        Optional::new(dce::dce(Default::default(), unresolved_mark), options.tree_shaking),
+        hygiene::hygiene_with_config(hygiene::Config {
+          top_level_mark,
+          ..Default::default()
+        }),
+        fixer(Some(&self.comments)),
+      ),
+    )
+  }
+
+  fn emit(&self, resolver: Rc<RefCell<Resolver>>, options: &EmitOptions) -> Result<(String, Option<String>), EmitError> {
     let program = Program::Module(self.module.clone());
-    let program = helpers::HELPERS.set(&helpers::Helpers::new(false), || program.fold_with(&mut visitor));
+    let program = helpers::HELPERS.set(&helpers::Helpers::new(false), || program.apply(self.build_pass(resolver, options)));
     let mut js_buf = Vec::new();
     let mut mappings = Vec::new();
     let writer = if options.source_map.is_some() {
-      JsWriter::new(self.source_map.clone(), eol, &mut js_buf, Some(&mut mappings))
+      JsWriter::new(self.source_map.clone(), "\n", &mut js_buf, Some(&mut mappings))
     } else {
-      JsWriter::new(self.source_map.clone(), eol, &mut js_buf, None)
+      JsWriter::new(self.source_map.clone(), "\n", &mut js_buf, None)
     };
     let mut emitter = Emitter {
       cfg: Config::default().with_target(options.target).with_minify(false),

@@ -1,5 +1,5 @@
 [package]
-name = "esm-tsx"
+name = "tsx"
 version = "0.0.0"
 edition = "2021"
 
@@ -12,19 +12,19 @@ indexmap = { version = "2.6.0", features = ["serde"] }
 path-slash = "0.2.1"
 pathdiff = "0.2.2"
 percent-encoding = "2.3.1"
-serde = { version = "1.0.213", features = ["derive"] }
+serde = { version = "1.0.214", features = ["derive"] }
 serde_json = { version = "1.0.132", features = ["preserve_order"] }
-thiserror = "1.0.65"
-url = { version = "2.5.2", features = ["serde"] }
+thiserror = "1.0.68"
+url = { version = "2.5.3", features = ["serde"] }
 
 # swc
 # docs: https://swc.rs
 # crate: https://crates.io/search?q=swc_ecmascript
 swc_atoms = "2.0.0"
-swc_core = { version = "1.0.6", features = ["ecma_quote" ] }
-swc_common = { version = "1.0.0", features = ["sourcemap"] }
-swc_ecmascript = { version = "1.0.0", features = ["codegen", "parser", "utils", "visit", "quote"] }
-swc_ecma_transforms = { version = "1.0.0", features = ["proposal", "typescript", "react", "optimization"] }
+swc_core = { version = "4.0.3", features = ["ecma_quote" ] }
+swc_common = { version = "3.0.0", features = ["sourcemap"] }
+swc_ecmascript = { version = "4.0.0", features = ["codegen", "parser", "utils", "visit", "quote"] }
+swc_ecma_transforms = { version = "4.0.0", features = ["proposal", "typescript", "react", "optimization"] }
 
 # wasm-bindgen
 # docs: https://rustwasm.github.io/docs/wasm-bindgen

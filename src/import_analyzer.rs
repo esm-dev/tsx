@@ -3,7 +3,7 @@ use crate::swc_helpers::*;
 use std::cell::RefCell;
 use std::rc::Rc;
 use swc_ecmascript::ast::*;
-use swc_ecmascript::visit::{noop_fold_type, Fold, FoldWith};
+use swc_ecmascript::visit::{  noop_fold_type, Fold, FoldWith};
 
 pub struct ImportAnalyzer {
   pub resolver: Rc<RefCell<Resolver>>,
@@ -91,39 +91,6 @@ impl Fold for ImportAnalyzer {
     }
 
     items
-  }
-
-  // resolve worker import url
-  fn fold_new_expr(&mut self, mut new_expr: NewExpr) -> NewExpr {
-    let ok = match new_expr.callee.as_ref() {
-      Expr::Ident(id) => id.sym.as_ref().eq("Worker"),
-      _ => false,
-    };
-    if ok {
-      if let Some(args) = &mut new_expr.args {
-        let src = match args.first() {
-          Some(ExprOrSpread { expr, .. }) => match expr.as_ref() {
-            Expr::Lit(lit) => match lit {
-              Lit::Str(s) => Some(s),
-              _ => None,
-            },
-            _ => None,
-          },
-          _ => None,
-        };
-        if let Some(src) = src {
-          let mut resolver = self.resolver.borrow_mut();
-          let new_src = resolver.resolve(src.value.as_ref(), true, Some(src.span.clone()));
-
-          args[0] = ExprOrSpread {
-            spread: None,
-            expr: Box::new(Expr::Lit(Lit::Str(new_str(&new_src)))),
-          }
-        }
-      }
-    };
-
-    new_expr.fold_children_with(self)
   }
 
   // resolve dynamic import url

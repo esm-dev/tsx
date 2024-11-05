@@ -6,11 +6,11 @@ use swc_atoms::Atom;
 use swc_common::DUMMY_SP;
 use swc_core::quote;
 use swc_ecmascript::ast::*;
-use swc_ecmascript::visit::{as_folder, Fold, VisitMut, VisitMutWith};
+use swc_ecmascript::visit::{visit_mut_pass, VisitMut, VisitMutWith};
 use url::Url;
 
-pub fn swc_prefresh(specifier: &str) -> impl Fold {
-  as_folder(PrefreshPlugin::new(hash_string(specifier)))
+pub fn swc_prefresh(specifier: &str) -> impl Pass {
+  visit_mut_pass(PrefreshPlugin::new(hash_string(specifier)))
 }
 
 pub fn hash_string(s: &str) -> String {
