@@ -68,26 +68,17 @@ impl SourceMapGenConfig for SourceMapGenOptions {
   }
 }
 
-#[derive(Clone)]
 pub struct SWC {
-  pub module: Module,
-  pub source_map: Rc<SourceMap>,
-  pub comments: SingleThreadedComments,
+  syntax: Syntax,
+  module: Module,
+  comments: SingleThreadedComments,
+  source_map: Rc<SourceMap>,
 }
 
 impl SWC {
   /// Parse a module from a string.
   pub fn parse(specifier: &str, source: &str, lang: Option<String>) -> Result<Self, DiagnosticBuffer> {
-    let syntax = if let Some(lang) = lang {
-      match lang.as_str() {
-        "ts" => Syntax::Typescript(get_ts_config(false)),
-        "tsx" => Syntax::Typescript(get_ts_config(true)),
-        "jsx" => Syntax::Es(get_es_config(true)),
-        _ => Syntax::Es(get_es_config(false)),
-      }
-    } else {
-      get_syntax_from_filename(specifier)
-    };
+    let syntax = get_syntax(specifier, lang);
     let source_map = SourceMap::default();
     let source_file = source_map.new_source_file(FileName::Real(Path::new(specifier).to_path_buf()).into(), source.into());
     let input = StringInput::from(&*source_file);
@@ -110,17 +101,18 @@ impl SWC {
     })?;
 
     Ok(SWC {
+      syntax,
       module,
-      source_map: Rc::new(source_map),
       comments,
+      source_map: Rc::new(source_map),
     })
   }
 
   /// Transform the module to JavaScript and optionally generate a source map.
   pub fn transform(self, resolver: Rc<RefCell<Resolver>>, options: &EmitOptions) -> Result<(String, Option<String>), EmitError> {
     swc_common::GLOBALS.set(&Globals::new(), || {
-      // transpile code
-      let (mut code, map) = self.emit(resolver.clone(), options)?;
+      let pass = self.build_pass(resolver.clone(), options);
+      let (mut code, map) = self.emit(pass, options)?;
 
       // resolve jsx runtime path defined by `// @jsxImportSource` annotation
       let mut jsx_runtime = None;
@@ -143,8 +135,9 @@ impl SWC {
     let top_level_mark = Mark::new();
     let unresolved_mark = Mark::new();
     let specifier = resolver.borrow().specifier.clone();
-    let is_ts = specifier.ends_with(".ts") || specifier.ends_with(".tsx") || specifier.ends_with(".mts");
-    let is_jsx = specifier.ends_with(".tsx") || specifier.ends_with(".jsx");
+    let is_ts = if let Syntax::Typescript(ts) = self.syntax { !ts.tsx } else { false };
+    let is_tsx = if let Syntax::Typescript(ts) = self.syntax { ts.tsx } else { false };
+    let is_jsx = if let Syntax::Es(es) = self.syntax { es.jsx } else { false };
     let is_http_sepcifier = is_http_specifier(&specifier);
     let is_dev = options.dev.is_some();
     let dev_options = options.dev.clone().unwrap_or_default();
@@ -171,7 +164,7 @@ impl SWC {
         emit_metadata: false,
         use_define_for_class_fields: false,
       }),
-      Optional::new(typescript::strip(unresolved_mark, top_level_mark), is_ts && !is_jsx),
+      Optional::new(typescript::strip(unresolved_mark, top_level_mark), is_ts),
       Optional::new(
         tsx(
           self.source_map.clone(),
@@ -184,34 +177,16 @@ impl SWC {
           unresolved_mark,
           top_level_mark,
         ),
-        is_ts && is_jsx,
+        is_tsx,
       ),
       // jsx features passes
-      (
-        Optional::new(
+      Optional::new(
+        (
           jsx_src(
             self.source_map.clone(),
             dev_options.jsx_source.as_ref().map(|opts| opts.file_name.clone()),
           ),
-          dev_options.jsx_source.is_some(),
-        ),
-        Optional::new(react::jsx_self(is_dev), is_jsx),
-        Optional::new(
-          react::refresh(
-            is_dev,
-            Some(react::RefreshOptions {
-              refresh_reg: "$RefreshReg$".into(),
-              refresh_sig: "$RefreshSig$".into(),
-              emit_full_signatures: false,
-            }),
-            self.source_map.clone(),
-            Some(&self.comments),
-            top_level_mark,
-          ),
-          !is_http_sepcifier && (dev_options.refresh.is_some() || dev_options.prefresh.is_some()),
-        ),
-        Optional::new(swc_prefresh(&specifier), !is_http_sepcifier && dev_options.prefresh.is_some()),
-        Optional::new(
+          react::jsx_self(is_dev),
           react::jsx(
             self.source_map.clone(),
             Some(&self.comments),
@@ -219,19 +194,38 @@ impl SWC {
             top_level_mark,
             unresolved_mark,
           ),
-          is_jsx,
+          react::display_name(),
+          react::pure_annotations(Some(&self.comments)),
         ),
-        Optional::new(react::display_name(), is_jsx),
-        Optional::new(react::pure_annotations(Some(&self.comments)), is_jsx),
+        is_jsx || is_tsx,
       ),
+      // analyze imports
       fold_pass(ImportAnalyzer {
         resolver: resolver.clone(),
       }),
+      // dev mode
       Optional::new(
-        fold_pass(Dev {
-          resolver: resolver.clone(),
-          options: options.dev.clone().unwrap_or_default(),
-        }),
+        (
+          Optional::new(
+            react::refresh(
+              true,
+              Some(react::RefreshOptions {
+                refresh_reg: "$RefreshReg$".into(),
+                refresh_sig: "$RefreshSig$".into(),
+                emit_full_signatures: false,
+              }),
+              self.source_map.clone(),
+              Some(&self.comments),
+              top_level_mark,
+            ),
+            dev_options.refresh.is_some() || dev_options.prefresh.is_some(),
+          ),
+          Optional::new(swc_prefresh(&specifier), dev_options.prefresh.is_some()),
+          fold_pass(Dev {
+            resolver: resolver.clone(),
+            options: options.dev.clone().unwrap_or_default(),
+          }),
+        ),
         is_dev && !is_http_sepcifier,
       ),
       // optimization passes
@@ -248,9 +242,9 @@ impl SWC {
     )
   }
 
-  fn emit(&self, resolver: Rc<RefCell<Resolver>>, options: &EmitOptions) -> Result<(String, Option<String>), EmitError> {
+  fn emit<P: Pass>(&self, pass: P, options: &EmitOptions) -> Result<(String, Option<String>), EmitError> {
     let program = Program::Module(self.module.clone());
-    let program = helpers::HELPERS.set(&helpers::Helpers::new(false), || program.apply(self.build_pass(resolver, options)));
+    let program = helpers::HELPERS.set(&helpers::Helpers::new(false), || program.apply(pass));
     let mut js_buf = Vec::new();
     let mut mappings = Vec::new();
     let writer = if options.source_map.is_some() {
@@ -304,7 +298,7 @@ impl SWC {
   }
 }
 
-fn get_es_config(jsx: bool) -> EsSyntax {
+fn get_es_syntax(jsx: bool) -> EsSyntax {
   EsSyntax {
     fn_bind: true,
     export_default_from: true,
@@ -316,7 +310,7 @@ fn get_es_config(jsx: bool) -> EsSyntax {
   }
 }
 
-fn get_ts_config(tsx: bool) -> TsSyntax {
+fn get_ts_syntax(tsx: bool) -> TsSyntax {
   TsSyntax {
     decorators: true,
     tsx,
@@ -324,20 +318,22 @@ fn get_ts_config(tsx: bool) -> TsSyntax {
   }
 }
 
-fn get_syntax_from_filename(filename: &str) -> Syntax {
-  let lang = filename
-    .split(|c| c == '?' || c == '#')
-    .next()
-    .unwrap()
-    .split('.')
-    .last()
-    .unwrap_or("js")
-    .to_lowercase();
+fn get_syntax(filename: &str, lang: Option<String>) -> Syntax {
+  let lang = lang.unwrap_or(
+    filename
+      .split(|c| c == '?' || c == '#')
+      .next()
+      .unwrap()
+      .split('.')
+      .last()
+      .unwrap_or("js")
+      .to_lowercase(),
+  );
   match lang.as_str() {
-    "js" | "mjs" => Syntax::Es(get_es_config(false)),
-    "jsx" => Syntax::Es(get_es_config(true)),
-    "ts" | "mts" => Syntax::Typescript(get_ts_config(false)),
-    "tsx" => Syntax::Typescript(get_ts_config(true)),
-    _ => Syntax::Es(get_es_config(false)),
+    "js" | "mjs" => Syntax::Es(get_es_syntax(false)),
+    "jsx" => Syntax::Es(get_es_syntax(true)),
+    "ts" | "mts" => Syntax::Typescript(get_ts_syntax(false)),
+    "tsx" => Syntax::Typescript(get_ts_syntax(true)),
+    _ => Syntax::Es(get_es_syntax(false)),
   }
 }
