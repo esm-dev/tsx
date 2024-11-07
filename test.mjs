@@ -52,6 +52,14 @@ async function test() {
     }
   }
 
+  // use `lang` option
+  {
+    const { code } = transform("/app.vue", `const s: string = "hello"`, { lang: "ts" });
+    if (!code.includes(`const s = "hello";`)) {
+      throw new Error("lang option not working");
+    }
+  }
+
   console.log("%c✔ test passed", "color: green;");
 }
 
