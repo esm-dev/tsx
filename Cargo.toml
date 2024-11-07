@@ -21,10 +21,10 @@ url = { version = "2.5.3", features = ["serde"] }
 # docs: https://swc.rs
 # crate: https://crates.io/search?q=swc_ecmascript
 swc_atoms = "2.0.0"
-swc_core = { version = "4.0.3", features = ["ecma_quote" ] }
-swc_common = { version = "3.0.0", features = ["sourcemap"] }
-swc_ecmascript = { version = "4.0.0", features = ["codegen", "parser", "utils", "visit", "quote"] }
-swc_ecma_transforms = { version = "4.0.0", features = ["proposal", "typescript", "react", "optimization"] }
+swc_core = { version = "5.0.2", features = ["ecma_quote" ] }
+swc_common = { version = "4.0.0", features = ["sourcemap"] }
+swc_ecmascript = { version = "5.0.0", features = ["codegen", "parser", "utils", "visit", "quote"] }
+swc_ecma_transforms = { version = "5.0.0", features = ["proposal", "typescript", "react", "optimization"] }
 
 # wasm-bindgen
 # docs: https://rustwasm.github.io/docs/wasm-bindgen
