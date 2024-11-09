@@ -106,8 +106,8 @@ pub fn transform(specifier: &str, source: &str, swc_transform_options: JsValue) 
     "es2020" => EsVersion::Es2020,
     "es2021" => EsVersion::Es2021,
     "es2022" => EsVersion::Es2022,
-    "es2023" => EsVersion::EsNext,
-    "es2024" => EsVersion::EsNext,
+    "es2023" => EsVersion::Es2023,
+    "es2024" => EsVersion::Es2024,
     "esnext" => EsVersion::EsNext,
     t => {
       return Err(JsError::new(("Invalid target: ".to_owned() + t).as_str()).into());

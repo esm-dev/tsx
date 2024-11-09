@@ -2,14 +2,13 @@
 // Add `ext` feature for esm.sh imports
 // Copyright 2018-2024 the Deno authors. All rights reserved. MIT license.
 
+use crate::specifier;
 use indexmap::IndexMap;
 use serde_json::{Map, Value};
 use std::cmp::Ordering;
 use std::collections::HashSet;
 use thiserror::Error;
 use url::Url;
-
-use crate::specifier::{is_http_specifier, is_relative_specifier};
 
 #[derive(Clone, PartialEq, Eq)]
 pub enum ImportMapDiagnostic {
@@ -427,7 +426,10 @@ fn resolve_imports_match(specifier_map: &SpecifierMap, normalized_specifier: &st
 
   // expand match
   // e.g. `"react": "https://esm.sh/react@18` -> `"react/": "https://esm.sh/react@18/`
-  if !is_http_specifier(normalized_specifier) && !is_relative_specifier(normalized_specifier) {
+  if !specifier::is_http_specifier(normalized_specifier)
+    && !specifier::is_relpath_specifier(normalized_specifier)
+    && !specifier::is_abspath_specifier(normalized_specifier)
+  {
     for (specifier_key, value) in specifier_map.iter() {
       if !specifier_key.ends_with('/') {
         if let Some(address) = value {

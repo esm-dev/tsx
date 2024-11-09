@@ -3,7 +3,7 @@ use crate::error::{DiagnosticBuffer, ErrorBuffer};
 use crate::import_analyzer::ImportAnalyzer;
 use crate::resolver::Resolver;
 use crate::specifier::is_http_specifier;
-use crate::swc_jsx_src::jsx_src;
+use crate::swc_jsx_src::jsx_source;
 use crate::swc_prefresh::swc_prefresh;
 use base64::{engine::general_purpose, Engine as _};
 use std::cell::RefCell;
@@ -182,9 +182,12 @@ impl SWC {
       // jsx features passes
       Optional::new(
         (
-          jsx_src(
-            self.source_map.clone(),
-            dev_options.jsx_source.as_ref().map(|opts| opts.file_name.clone()),
+          Optional::new(
+            jsx_source(
+              self.source_map.clone(),
+              dev_options.jsx_source.as_ref().map(|opts| opts.file_name.clone()),
+            ),
+            dev_options.jsx_source.is_some(),
           ),
           react::jsx_self(is_dev),
           react::jsx(

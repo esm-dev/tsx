@@ -1,12 +1,12 @@
 use crate::import_map::ImportMap;
-use crate::specifier::{is_css_specifier, is_http_specifier,has_file_extension};
+use crate::specifier::{is_abspath_specifier, is_http_specifier, is_relpath_specifier};
 use base64::{engine::general_purpose, Engine as _};
 use path_slash::PathBufExt;
 use pathdiff::diff_paths;
 use serde::Serialize;
 use std::collections::HashMap;
 use std::ops::Not;
-use std::path::PathBuf;
+use std::path::{Path, PathBuf};
 use std::str::FromStr;
 use swc_common::Span;
 use url::Url;
@@ -83,43 +83,54 @@ impl Resolver {
       im_resolved_url.clone()
     };
 
-    let is_css = is_css_specifier(&resolved_url);
-    if is_css {
-      if resolved_url.contains("?") {
-        resolved_url = resolved_url + "&module"
-      } else {
-        resolved_url = resolved_url + "?module"
-      }
-    }
-
-    if !is_http_specifier(&resolved_url) && has_file_extension(&resolved_url) {
-      if !is_css {
-        if let Some(base_url) = self.import_map.as_ref().map(|im| im.base_url()) {
-          let base_path = base_url.path();
-          if !base_path.eq("/anonymous_import_map.json") {
-            let base_path_base64 = general_purpose::URL_SAFE_NO_PAD.encode(base_path.as_bytes());
-            if resolved_url.contains("?") {
-              resolved_url = format!("{}&im={}", resolved_url, base_path_base64);
+    if is_relpath_specifier(&resolved_url) || is_abspath_specifier(&resolved_url) {
+      if let Some(ext) = Path::new(&resolved_url).extension() {
+        let ext = ext.to_str().unwrap();
+        match ext {
+          "js" | "jsx" | "ts" | "tsx" | "mjs" | "mts" | "vue" | "svelte" | "css" => {
+            if ext.eq("css") {
+              if resolved_url.contains("?") {
+                resolved_url += "&module";
+              } else {
+                resolved_url += "?module";
+              }
             } else {
-              resolved_url = format!("{}?im={}", resolved_url, base_path_base64);
+              if let Some(base_url) = self.import_map.as_ref().map(|im| im.base_url()) {
+                let base_path = base_url.path();
+                if !base_path.eq("/anonymous_import_map.json") {
+                  let base_path_base64 = general_purpose::URL_SAFE_NO_PAD.encode(base_path.as_bytes());
+                  if resolved_url.contains("?") {
+                    resolved_url = format!("{}&im={}", resolved_url, base_path_base64);
+                  } else {
+                    resolved_url = format!("{}?im={}", resolved_url, base_path_base64);
+                  }
+                }
+              }
+            }
+            let mut v: Option<&String> = None;
+            if let Some(version_map) = &self.version_map {
+              let fullpath = referrer.join(&resolved_url).unwrap().path().to_owned();
+              if version_map.contains_key(&fullpath) {
+                v = version_map.get(&fullpath)
+              } else {
+                v = version_map.get("*")
+              }
+            };
+            if let Some(v) = v {
+              if resolved_url.contains("?") {
+                resolved_url = format!("{}&v={}", resolved_url, v);
+              } else {
+                resolved_url = format!("{}?v={}", resolved_url, v);
+              }
             }
           }
-        }
-      }
-      let mut v: Option<&String> = None;
-      if let Some(version_map) = &self.version_map {
-        let fullpath = referrer.join(&resolved_url).unwrap().path().to_owned();
-        if version_map.contains_key(&fullpath) {
-          v = version_map.get(&fullpath)
-        } else {
-          v = version_map.get("*")
-        }
-      };
-      if let Some(v) = v {
-        if resolved_url.contains("?") {
-          resolved_url = format!("{}&v={}", resolved_url, v);
-        } else {
-          resolved_url = format!("{}?v={}", resolved_url, v);
+          _ => {
+            if resolved_url.contains("?") {
+              resolved_url += "&url";
+            } else {
+              resolved_url += "?url";
+            }
+          }
         }
       }
     }

@@ -5,17 +5,17 @@ use swc_ecmascript::utils::quote_ident;
 use swc_ecmascript::visit::{noop_visit_mut_type, visit_mut_pass, VisitMut, VisitMutWith};
 
 /// `@babel/plugin-transform-react-jsx-source`
-pub fn jsx_src(cm: Lrc<SourceMap>, file_name: Option<String>) -> impl Pass {
-  visit_mut_pass(JsxSrc { cm, file_name })
+pub fn jsx_source(cm: Lrc<SourceMap>, file_name: Option<String>) -> impl Pass {
+  visit_mut_pass(JsxSource { cm, file_name })
 }
 
 #[derive(Clone)]
-struct JsxSrc {
+struct JsxSource {
   cm: Lrc<SourceMap>,
   file_name: Option<String>,
 }
 
-impl VisitMut for JsxSrc {
+impl VisitMut for JsxSource {
   noop_visit_mut_type!();
 
   fn visit_mut_jsx_opening_element(&mut self, e: &mut JSXOpeningElement) {
