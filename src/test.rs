@@ -71,6 +71,8 @@ fn module_analyzer() {
     import { jsx } from "react/jsx-runtime"
     import { foo } from "~/foo.ts"
     import Layout from "./Layout.tsx"
+    import html from "./about.md"
+    import { html } from "./about.md?jsx"
     import "https://esm.sh/vue@3.5.12"
     import "https://esm.sh/vue@3.5.12?dev"
     import "../../style/app.css"
@@ -83,9 +85,11 @@ fn module_analyzer() {
   assert!(code.contains("from \"https://esm.sh/react@18\""));
   assert!(code.contains("from \"https://esm.sh/react@18/jsx-runtime\""));
   assert!(code.contains("from \"/foo.ts?im=L2luZGV4Lmh0bWw&v=2.0.0\""));
+  assert!(code.contains("from \"./about.md?v=1.0.0\""));
+  assert!(code.contains("from \"./about.md?jsx&im=L2luZGV4Lmh0bWw&v=1.0.0\""));
+  assert!(code.contains("from \"./Layout.tsx?im=L2luZGV4Lmh0bWw&v=1.0.0\""));
   assert!(code.contains("import \"https://esm.sh/vue@3.5.12\""));
   assert!(code.contains("import \"https://esm.sh/vue@3.5.12?dev\""));
-  assert!(code.contains("from \"./Layout.tsx?im=L2luZGV4Lmh0bWw&v=1.0.0\""));
   assert!(code.contains("import \"/style/app.css?module&v=1.0.0\""));
   assert!(code.contains("import imgUrl from \"./img.png?url\""));
   assert!(code.contains("import(\"https://esm.sh/asksomeonelse\")"));

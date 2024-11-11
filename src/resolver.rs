@@ -83,18 +83,22 @@ impl Resolver {
       im_resolved_url.clone()
     };
 
-    if is_relpath_specifier(&resolved_url) || is_abspath_specifier(&resolved_url) {
+    if (is_relpath_specifier(&resolved_url) || is_abspath_specifier(&resolved_url))
+      && !resolved_url.contains("?raw")
+      && !resolved_url.contains("?url")
+    {
       if let Some(ext) = Path::new(&resolved_url).extension() {
-        let ext = ext.to_str().unwrap();
-        match ext {
-          "js" | "jsx" | "ts" | "tsx" | "mjs" | "mts" | "vue" | "svelte" | "css" => {
-            if ext.eq("css") {
+        let extname = ext.to_str().unwrap();
+        let extname = extname.contains('?').then(|| extname.split('?').next().unwrap()).unwrap_or(extname);
+        match extname {
+          "js" | "jsx" | "ts" | "tsx" | "mjs" | "mts" | "vue" | "svelte" | "css" | "md" => {
+            if extname.eq("css") {
               if resolved_url.contains("?") {
                 resolved_url += "&module";
               } else {
                 resolved_url += "?module";
               }
-            } else {
+            } else if !extname.eq("md") || resolved_url.contains("?jsx") {
               if let Some(base_url) = self.import_map.as_ref().map(|im| im.base_url()) {
                 let base_path = base_url.path();
                 if !base_path.eq("/anonymous_import_map.json") {
