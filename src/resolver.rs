@@ -84,8 +84,8 @@ impl Resolver {
     };
 
     if (is_relpath_specifier(&resolved_url) || is_abspath_specifier(&resolved_url))
-      && !resolved_url.contains("?raw")
-      && !resolved_url.contains("?url")
+      && !resolved_url.ends_with("?raw")
+      && !resolved_url.ends_with("?url")
     {
       if let Some(ext) = Path::new(&resolved_url).extension() {
         let extname = ext.to_str().unwrap();
@@ -98,7 +98,11 @@ impl Resolver {
               } else {
                 resolved_url += "?module";
               }
-            } else if !extname.eq("md") || resolved_url.contains("?jsx") {
+            } else if !extname.eq("md")
+              || resolved_url.ends_with("?jsx")
+              || resolved_url.ends_with("?vue")
+              || resolved_url.ends_with("?svelte")
+            {
               if let Some(base_url) = self.import_map.as_ref().map(|im| im.base_url()) {
                 let base_path = base_url.path();
                 if !base_path.eq("/anonymous_import_map.json") {
