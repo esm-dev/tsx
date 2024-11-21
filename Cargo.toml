@@ -12,19 +12,19 @@ indexmap = { version = "2.6.0", features = ["serde"] }
 path-slash = "0.2.1"
 pathdiff = "0.2.2"
 percent-encoding = "2.3.1"
-serde = { version = "1.0.214", features = ["derive"] }
-serde_json = { version = "1.0.132", features = ["preserve_order"] }
-thiserror = "1.0.68"
+serde = { version = "1.0.215", features = ["derive"] }
+serde_json = { version = "1.0.133", features = ["preserve_order"] }
+thiserror = "2.0.3"
 url = { version = "2.5.3", features = ["serde"] }
 
 # swc
 # docs: https://swc.rs
 # crate: https://crates.io/search?q=swc_ecmascript
 swc_atoms = "2.0.0"
-swc_core = { version = "5.0.2", features = ["ecma_quote" ] }
-swc_common = { version = "4.0.0", features = ["sourcemap"] }
-swc_ecmascript = { version = "5.0.0", features = ["codegen", "parser", "utils", "visit", "quote"] }
-swc_ecma_transforms = { version = "5.0.0", features = ["proposal", "typescript", "react", "optimization"] }
+swc_core = { version = "6.0.1", features = ["ecma_quote" ] }
+swc_common = { version = "4.0.1", features = ["sourcemap"] }
+swc_ecmascript = { version = "6.0.0", features = ["codegen", "parser", "utils", "visit", "quote"] }
+swc_ecma_transforms = { version = "6.0.0", features = ["proposal", "typescript", "react", "optimization"] }
 
 # wasm-bindgen
 # docs: https://rustwasm.github.io/docs/wasm-bindgen
