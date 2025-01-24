@@ -23,7 +23,7 @@ const importMap = {
     "react": "https://esm.sh/react@18",
   }
 }
-const ret = transform("./App.tsx", appTsx, { importMap })
+const ret = transform({ filename: "./App.tsx", code: appTsx, importMap })
 console.log(ret.code)
 ```
 
