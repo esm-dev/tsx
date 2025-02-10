@@ -10,6 +10,7 @@ use std::cell::RefCell;
 use std::fmt;
 use std::path::Path;
 use std::rc::Rc;
+use swc_atoms::Atom;
 use swc_common::comments::SingleThreadedComments;
 use swc_common::errors::{Handler, HandlerFlags};
 use swc_common::pass::Optional;
@@ -144,7 +145,7 @@ impl SWC {
     let jsx_options = if let Some(jsx_import_source) = &options.jsx_import_source {
       react::Options {
         runtime: Some(react::Runtime::Automatic),
-        import_source: Some(jsx_import_source.to_owned()),
+        import_source: Some(Atom::from(jsx_import_source.as_str())),
         development: Some(is_dev),
         ..Default::default()
       }
