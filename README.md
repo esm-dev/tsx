@@ -10,7 +10,7 @@ import init, { transform } from "https://esm.sh/@esm.sh/tsx";
 // initialize the wasm module
 await init();
 
-const appTsx = `
+const code = `
 import { useState } from "react"
 
 export default App() {
@@ -23,7 +23,7 @@ const importMap = {
     "react": "https://esm.sh/react@18",
   }
 }
-const ret = transform({ filename: "./App.tsx", code: appTsx, importMap })
+const ret = transform({ filename: "./App.tsx", code, importMap })
 console.log(ret.code)
 ```
 
