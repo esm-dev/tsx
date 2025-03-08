@@ -40,9 +40,18 @@ export interface TransformOptions {
   /** The import map, pass it if the browser does not support import maps. */
   importMap?: ImportMap;
   /**
-   * The jsx import source, default is "react".
+   * Specifies the JSX import source. By default, it will use `react` or `preact` from the import map.
    *
-   * Alternative you can set it by adding "@jsxRuntime" entry in the import map.
+   * ```json
+   * {
+   *   "importMap": {
+   *     "imports": { "react": "https://esm.sh/react" }
+   *   }
+   * }
+   * ```
+   *
+   * Alternatively, you can specify it by adding an "@jsxRuntime" entry in the import map.
+   *
    * ```json
    * {
    *   "importMap": {
