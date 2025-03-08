@@ -1,6 +1,6 @@
 {
   "name": "@esm.sh/tsx",
-  "version": "1.1.0",
+  "version": "1.1.1",
   "description": "A TSX transpiler for esm.sh services.",
   "type": "module",
   "module": "./index.mjs",
