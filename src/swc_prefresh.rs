@@ -9,7 +9,7 @@ use swc_ecmascript::ast::*;
 use swc_ecmascript::visit::{visit_mut_pass, VisitMut, VisitMutWith};
 use url::Url;
 
-pub fn swc_prefresh(specifier: &str) -> impl Pass {
+pub fn swc_prefresh(specifier: &str) -> impl Pass + use<> {
   visit_mut_pass(PrefreshPlugin::new(hash_string(specifier)))
 }
 
