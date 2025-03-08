@@ -11,7 +11,7 @@ export interface DevOptions {
    * Enable hot module replacement, default is disabled.
    * ```js
    * // the injected code
-   * import __CREATE_WEB_MODULE__ from '@hmr.js'
+   * import __CREATE_HOT_CONTEXT__ from "hmr_runtime"
    * import.meta.hot = __CREATE_HOT_CONTEXT__(import.meta.url)
    */
   hmr?: { runtime: string };
