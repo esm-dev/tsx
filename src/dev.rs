@@ -1,6 +1,5 @@
 use crate::resolver::Resolver;
 use crate::swc_helpers::*;
-use base64::{engine::general_purpose, Engine as _};
 use serde::Deserialize;
 use std::cell::RefCell;
 use std::rc::Rc;
@@ -73,21 +72,7 @@ impl Fold for Dev {
         with: None,
         phase: ImportPhase::Evaluation,
       })));
-      // import.meta.hot = __CREATE_HOT_CONTEXT__($specifier)
-      let mut args = vec![ExprOrSpread {
-        spread: None,
-        expr: Box::new(Expr::Lit(Lit::Str(new_str(&resolver.specifier)))),
-      }];
-      if let Some(base_url) = resolver.import_map.as_ref().map(|im| im.base_url()) {
-        let base_path = base_url.path();
-        if !base_path.eq("/anonymous_import_map.json") {
-          let base_path_base64 = general_purpose::URL_SAFE_NO_PAD.encode(base_path.as_bytes());
-          args.push(ExprOrSpread {
-            spread: None,
-            expr: Box::new(Expr::Lit(Lit::Str(new_str(&base_path_base64)))),
-          });
-        }
-      }
+      // import.meta.hot = __CREATE_HOT_CONTEXT__(import.meta.url)
       items.push(ModuleItem::Stmt(Stmt::Expr(ExprStmt {
         span: DUMMY_SP,
         expr: Box::new(Expr::Assign(AssignExpr {
@@ -98,7 +83,10 @@ impl Fold for Dev {
             span: DUMMY_SP,
             ctxt: SyntaxContext::empty(),
             callee: Callee::Expr(Box::new(ident_expr("__CREATE_HOT_CONTEXT__"))),
-            args,
+            args: vec![ExprOrSpread {
+              spread: None,
+              expr: Box::new(Expr::Member(member_expr(simple_member_expr("import", "meta"), "url"))),
+            }],
             type_args: None,
           })),
         })),
