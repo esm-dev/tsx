@@ -20,10 +20,10 @@ export default App() {
 `
 const importMap = {
   imports: {
-    "react": "https://esm.sh/react@18",
+    "react": "https://esm.sh/react@19.0.0",
   }
 }
-const ret = transform({ filename: "./App.tsx", code, importMap })
+const ret = transform({ filename: "App.tsx", code, importMap })
 console.log(ret.code)
 ```
 
@@ -37,7 +37,7 @@ You will need [rust](https://www.rust-lang.org/tools/install) 1.60+ and
 ## Build
 
 ```bash
-wasm-pack build --target web
+wasm-pack build --target web --no-pack --release"
 ```
 
 ## Run tests
