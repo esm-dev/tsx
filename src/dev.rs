@@ -137,12 +137,12 @@ impl Fold for Dev {
       } else {
         let mut has_react_dom_import = false;
         for item in &resolver.deps {
-          if item.specifier.eq("react-dom") || item.specifier.starts_with("react-dom/") {
+          if item.specifier.eq("react-dom") || item.specifier.eq("react-dom/client") {
             has_react_dom_import = true;
             break;
           }
         }
-        // we need to import "REFRESH_RUNTIME" before ReactDom starts to render the app,
+        // import "REFRESH_RUNTIME" before react-dom starts to render the app,
         // to make sure that the refresh runtime is hooked.
         if has_react_dom_import {
           // import "{REFRESH_RUNTIME_URL}"
