@@ -1,4 +1,4 @@
-import initWasm, { initSync as initWasmSync, transform as swc } from "./pkg/tsx.js";
+import initWasm, { initSync as initWasmSync, transform as transpile } from "./pkg/tsx.js";
 
 export function transform({ filename, code, ...options }) {
   if (typeof filename !== "string" || filename === "") {
@@ -11,7 +11,7 @@ export function transform({ filename, code, ...options }) {
   if (importMap !== undefined && !(typeof importMap === "object" && importMap !== null && !Array.isArray(importMap))) {
     throw new Error("invalid importMap");
   }
-  return swc(filename, code, options);
+  return transpile(filename, code, options);
 }
 
 export function initSync(module) {
@@ -19,15 +19,16 @@ export function initSync(module) {
 }
 
 export async function init(module_or_path) {
-  if (!module_or_path && import.meta.url.startsWith("file://") && globalThis.Deno) {
-    const wasmUrl = new URL("./pkg/tsx_bg.wasm", import.meta.url);
+  const importUrl = import.meta.url
+  if (!module_or_path && importUrl.startsWith("file://") && globalThis.Deno) {
+    const wasmUrl = new URL("./pkg/tsx_bg.wasm", importUrl);
     const wasmBytes = await Deno.readFile(wasmUrl);
     initWasmSync({ module: wasmBytes });
     return;
   }
   const esmshBaseUrl = "https://esm.sh/@esm.sh/tsx@";
-  if (!module_or_path && import.meta.url.startsWith(esmshBaseUrl)) {
-    const version = import.meta.url.slice(esmshBaseUrl.length).split("/", 1)[0];
+  if (!module_or_path && importUrl.startsWith(esmshBaseUrl)) {
+    const version = importUrl.slice(esmshBaseUrl.length).split("/", 1)[0];
     module_or_path = esmshBaseUrl + version + "/pkg/tsx_bg.wasm";
   }
   return initWasm(module_or_path ? { module_or_path } : undefined);
