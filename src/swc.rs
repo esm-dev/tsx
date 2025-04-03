@@ -113,21 +113,7 @@ impl SWC {
   pub fn transform(self, resolver: Rc<RefCell<Resolver>>, options: &EmitOptions) -> Result<(String, Option<String>), EmitError> {
     swc_common::GLOBALS.set(&Globals::new(), || {
       let pass = self.build_pass(resolver.clone(), options);
-      let (mut code, map) = self.emit(pass, options)?;
-
-      // resolve jsx runtime path defined by `// @jsxImportSource` annotation
-      let mut jsx_runtime = None;
-      let resolver = resolver.borrow();
-      for dep in &resolver.deps {
-        if dep.specifier.ends_with("/jsx-runtime") || dep.specifier.ends_with("/jsx-dev-runtime") {
-          jsx_runtime = Some((dep.specifier.clone(), dep.resolved_url.clone()));
-          break;
-        }
-      }
-      if let Some((jsx_runtime, import_url)) = jsx_runtime {
-        code = code.replace(format!("\"{}\"", jsx_runtime).as_str(), format!("\"{}\"", import_url).as_str());
-      }
-
+      let (  code, map) = self.emit(pass, options)?;
       Ok((code, map))
     })
   }
@@ -305,6 +291,7 @@ impl SWC {
 fn get_es_syntax(jsx: bool) -> EsSyntax {
   EsSyntax {
     fn_bind: true,
+    import_attributes: true,
     export_default_from: true,
     allow_super_outside_method: true,
     allow_return_outside_function: true,

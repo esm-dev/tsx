@@ -17,7 +17,7 @@ async function test() {
 
     createRoot(document.getElementById("app")).render(<App />)
   `;
-  const { deps, code } = transform("/source.tsx", source, {
+  const { code } = transform("/source.tsx", source, {
     importMap: {
       "$src": "file:///index.html",
       "imports": {
@@ -25,21 +25,30 @@ async function test() {
         "react-dom": "https://esm.sh/react-dom@18",
       },
     },
+    sourceMap: "inline",
+    versionMap: {
+      "/App.tsx": "2",
+    },
   });
   if (!code.includes(`import { jsx as _jsx } from "https://esm.sh/react@18/jsx-runtime"`)) {
+    console.log(code)
     throw new Error("jsx-runtime not imported");
   }
   if (!code.includes(`import { createRoot } from "https://esm.sh/react-dom@18/client"`)) {
+    console.log(code)
     throw new Error("'react-dom/client' not resolved");
   }
-  if (!code.includes(`import App from "/App.tsx?im=L2luZGV4Lmh0bWw"`)) {
+  if (!code.includes(`import App from "/App.tsx?im=L2luZGV4Lmh0bWw&v=2"`)) {
+    console.log(code)
     throw new Error("'/App.tsx' not resolved");
   }
   if (!code.includes(`_jsx(App`)) {
+    console.log(code)
     throw new Error("jsx not transformed");
   }
-  if (deps?.length !== 3) {
-    throw new Error("deps length should be 3");
+  if (!code.includes(`//# sourceMappingURL=data:application/json;charset=utf-8;base64,`)) {
+    console.log(code)
+    throw new Error("source map not inlined");
   }
 
   // catch syntax error

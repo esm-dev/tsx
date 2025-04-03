@@ -13,7 +13,7 @@ mod swc_prefresh;
 mod test;
 
 use dev::DevOptions;
-use resolver::{DependencyDescriptor, Resolver};
+use resolver::Resolver;
 use serde::{Deserialize, Serialize};
 use specifier::is_http_specifier;
 use std::cell::RefCell;
@@ -58,8 +58,6 @@ impl Default for SWCTransformOptions {
 #[derive(Serialize)]
 pub struct SWCTransformOutput {
   pub code: String,
-  #[serde(skip_serializing_if = "Vec::is_empty")]
-  pub deps: Vec<DependencyDescriptor>,
   #[serde(skip_serializing_if = "Option::is_none")]
   pub map: Option<String>,
 }
@@ -162,14 +160,6 @@ pub fn transform(specifier: &str, source: &str, swc_transform_options: JsValue) 
       return Err(JsError::new(&e.to_string()).into());
     }
   };
-  let r = resolver.borrow();
 
-  Ok(
-    serde_wasm_bindgen::to_value(&SWCTransformOutput {
-      code,
-      map,
-      deps: r.deps.clone(),
-    })
-    .unwrap(),
-  )
+  Ok(serde_wasm_bindgen::to_value(&SWCTransformOutput { code, map }).unwrap())
 }

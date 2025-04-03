@@ -3,10 +3,10 @@ use crate::swc_helpers::*;
 use serde::Deserialize;
 use std::cell::RefCell;
 use std::rc::Rc;
-use swc_common::{SyntaxContext, DUMMY_SP};
+use swc_common::{DUMMY_SP, SyntaxContext};
 use swc_ecmascript::ast::*;
 use swc_ecmascript::utils::quote_ident;
-use swc_ecmascript::visit::{noop_fold_type, Fold};
+use swc_ecmascript::visit::{Fold, noop_fold_type};
 
 #[derive(Deserialize, Clone)]
 #[serde(rename_all = "camelCase")]
@@ -136,8 +136,8 @@ impl Fold for Dev {
         items.push(window_assign("$RefreshSig$", simple_member_expr("__REFRESH_RUNTIME__", "sign")));
       } else {
         let mut has_react_dom_import = false;
-        for item in &resolver.deps {
-          if item.specifier.eq("react-dom") || item.specifier.eq("react-dom/client") {
+        for (specifier, _) in &resolver.deps {
+          if specifier.eq("react-dom") || specifier.eq("react-dom/client") {
             has_react_dom_import = true;
             break;
           }

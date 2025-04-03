@@ -87,15 +87,6 @@ export interface TransformOptions {
 export interface TransformResult {
   readonly code: string;
   readonly map?: string;
-  readonly deps?: DependencyDescriptor[];
-}
-
-/** Dependency descriptor. */
-export interface DependencyDescriptor {
-  readonly specifier: string;
-  readonly resolvedUrl: string;
-  readonly loc?: { start: number; end: number };
-  readonly dynamic?: boolean;
 }
 
 /** Transforms the given code. */

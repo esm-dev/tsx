@@ -71,29 +71,40 @@ fn module_analyzer() {
     import { jsx } from "react/jsx-runtime"
     import { foo } from "~/foo.ts"
     import Layout from "./Layout.tsx"
-    import html from "./about.md"
-    import { html } from "./about.md?jsx"
-    import "https://esm.sh/vue@3.5.12"
-    import "https://esm.sh/vue@3.5.12?dev"
+    import Foo from "./foo.vue"
+    import Foo from "./foo.svelte"
+    import html from "./foo.md"
+    import FooReact from "./foo.md?jsx"
+    import FooVue from "./foo.md?vue"
+    import FooSvelte from "./foo.md?svelte"
+    import "https://esm.sh/react-dom@18"
+    import "https://esm.sh/react-dom@18?dev"
+    import data from "/data.json" with { type: "json" };
     import "../../style/app.css"
     import imgUrl from "./img.png"
-    import("https://esm.sh/asksomeonelse")
-    new Worker("https://esm.sh/asksomeonelse")
+    import imgRaw from "./img.png?raw"
+    import("react")
   "#;
   let (code, _, _) = transform("/foo/bar/index.js", source, &EmitOptions::default());
   assert!(code.contains("import \"/@hmr\""));
   assert!(code.contains("from \"https://esm.sh/react@18\""));
   assert!(code.contains("from \"https://esm.sh/react@18/jsx-runtime\""));
   assert!(code.contains("from \"/foo.ts?im=L2luZGV4Lmh0bWw&v=2.0.0\""));
-  assert!(code.contains("from \"./about.md?v=1.0.0\""));
-  assert!(code.contains("from \"./about.md?jsx&im=L2luZGV4Lmh0bWw&v=1.0.0\""));
+  assert!(code.contains("from \"./foo.vue?im=L2luZGV4Lmh0bWw&v=1.0.0\""));
+  assert!(code.contains("from \"./foo.svelte?im=L2luZGV4Lmh0bWw&v=1.0.0\""));
+  assert!(code.contains("from \"./foo.md?v=1.0.0\""));
+  assert!(code.contains("from \"./foo.md?jsx&im=L2luZGV4Lmh0bWw&v=1.0.0\""));
+  assert!(code.contains("from \"./foo.md?vue&im=L2luZGV4Lmh0bWw&v=1.0.0\""));
+  assert!(code.contains("from \"./foo.md?svelte&im=L2luZGV4Lmh0bWw&v=1.0.0\""));
   assert!(code.contains("from \"./Layout.tsx?im=L2luZGV4Lmh0bWw&v=1.0.0\""));
-  assert!(code.contains("import \"https://esm.sh/vue@3.5.12\""));
-  assert!(code.contains("import \"https://esm.sh/vue@3.5.12?dev\""));
+  assert!(code.contains("import \"https://esm.sh/react-dom@18\""));
+  assert!(code.contains("import \"https://esm.sh/react-dom@18?dev\""));
+  assert!(code.contains("import data from \"/data.json?v=1.0.0\" with {"));
+  assert!(code.contains("    type: \"json\""));
   assert!(code.contains("import \"/style/app.css?module&v=1.0.0\""));
   assert!(code.contains("import imgUrl from \"./img.png?url\""));
-  assert!(code.contains("import(\"https://esm.sh/asksomeonelse\")"));
-  assert!(code.contains("new Worker(\"https://esm.sh/asksomeonelse\")"));
+  assert!(code.contains("import imgRaw from \"./img.png?raw\""));
+  assert!(code.contains("import(\"https://esm.sh/react@18\")"));
 }
 
 #[test]
@@ -120,7 +131,7 @@ fn tsx() {
   assert!(code.contains("_jsx(\"h1\", {"));
   assert!(code.contains("children: \"Hello world!\""));
   assert_eq!(
-    resolver.borrow().deps.get(0).unwrap().specifier,
+    resolver.borrow().deps.get(0).unwrap().0,
     "https://esm.sh/react@18/jsx-runtime"
   );
 }
