@@ -6,7 +6,7 @@ use swc_atoms::Atom;
 use swc_core::common::DUMMY_SP;
 use swc_core::quote;
 use swc_ecmascript::ast::*;
-use swc_ecmascript::visit::{visit_mut_pass, VisitMut, VisitMutWith};
+use swc_ecmascript::visit::{VisitMut, VisitMutWith, visit_mut_pass};
 use url::Url;
 
 pub fn swc_prefresh(specifier: &str) -> impl Pass + use<> {

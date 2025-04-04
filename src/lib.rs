@@ -91,7 +91,7 @@ pub fn transform(specifier: &str, source: &str, swc_transform_options: JsValue) 
   } else {
     None
   };
-  let resolver = Rc::new(RefCell::new(Resolver::new(specifier, im.to_owned() )));
+  let resolver = Rc::new(RefCell::new(Resolver::new(specifier, im.to_owned())));
   let target = match options.target.unwrap_or("esnext".into()).to_lowercase().as_str() {
     "es2015" => EsVersion::Es2015,
     "es2016" => EsVersion::Es2016,

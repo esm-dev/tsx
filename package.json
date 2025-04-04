@@ -16,7 +16,8 @@
     "prepublishOnly": "npm run test && npm run test:wasm",
     "build": "wasm-pack build --target web --no-pack --release",
     "test": "cargo test --all",
-    "test:wasm": "npm run build && node test.mjs"
+    "test:wasm": "npm run build && node test.mjs",
+    "fmt": "cargo fmt --all"
   },
   "repository": {
     "type": "git",

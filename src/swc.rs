@@ -5,7 +5,7 @@ use crate::resolver::Resolver;
 use crate::specifier::is_http_specifier;
 use crate::swc_jsx_src::jsx_source;
 use crate::swc_prefresh::swc_prefresh;
-use base64::{engine::general_purpose, Engine as _};
+use base64::{Engine as _, engine::general_purpose};
 use std::cell::RefCell;
 use std::fmt;
 use std::path::Path;
@@ -21,9 +21,8 @@ use swc_ecma_transforms::proposals::decorators;
 use swc_ecma_transforms::typescript::{tsx, typescript};
 use swc_ecma_transforms::{fixer, helpers, hygiene, react};
 use swc_ecmascript::ast::{EsVersion, Module, Pass, Program};
-use swc_ecmascript::codegen::{text_writer::JsWriter, Config, Emitter, Node};
-use swc_ecmascript::parser::{lexer, Parser};
-use swc_ecmascript::parser::{EsSyntax, StringInput, Syntax, TsSyntax};
+use swc_ecmascript::codegen::{Config, Emitter, Node, text_writer::JsWriter};
+use swc_ecmascript::parser::{EsSyntax, Parser, StringInput, Syntax, TsSyntax, lexer};
 use swc_ecmascript::visit::fold_pass;
 
 /// Options for transpiling a module.
@@ -115,7 +114,7 @@ impl SWC {
   pub fn transform(self, resolver: Rc<RefCell<Resolver>>, options: &EmitOptions) -> Result<(String, Option<String>), EmitError> {
     swc_common::GLOBALS.set(&Globals::new(), || {
       let pass = self.build_pass(resolver.clone(), options);
-      let (  code, map) = self.emit(pass, options)?;
+      let (code, map) = self.emit(pass, options)?;
       Ok((code, map))
     })
   }

@@ -1,8 +1,8 @@
 // copied from https://github.com/swc-project/swc/blob/main/crates/swc_ecma_transforms_react/src/jsx_src/mod.rs
-use swc_common::{sync::Lrc, SourceMap, DUMMY_SP};
+use swc_common::{DUMMY_SP, SourceMap, sync::Lrc};
 use swc_ecmascript::ast::*;
 use swc_ecmascript::utils::quote_ident;
-use swc_ecmascript::visit::{noop_visit_mut_type, visit_mut_pass, VisitMut, VisitMutWith};
+use swc_ecmascript::visit::{VisitMut, VisitMutWith, noop_visit_mut_type, visit_mut_pass};
 
 /// `@babel/plugin-transform-react-jsx-source`
 pub fn jsx_source(cm: Lrc<SourceMap>, file_name: Option<String>) -> impl Pass {
