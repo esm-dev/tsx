@@ -1,4 +1,4 @@
-import initWasm, { initSync as initWasmSync, transform as transpile } from "./pkg/tsx.js";
+import initWasm, { initSync as initWasmSync, transform as wasmTransform } from "./pkg/tsx.js";
 
 export function transform({ filename, code, ...options }) {
   if (typeof filename !== "string" || filename === "") {
@@ -11,7 +11,7 @@ export function transform({ filename, code, ...options }) {
   if (importMap !== undefined && !(typeof importMap === "object" && importMap !== null && !Array.isArray(importMap))) {
     throw new Error("invalid importMap");
   }
-  return transpile(filename, code, options);
+  return wasmTransform(filename, code, options);
 }
 
 export function initSync(module) {
