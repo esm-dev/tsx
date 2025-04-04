@@ -17,14 +17,14 @@ export default App() {
   const [msg] = useState<string>("world")
   return <h1>Hello {msg}!</h1>
 }
-`
+`;
 const importMap = {
   imports: {
     "react": "https://esm.sh/react@19.0.0",
-  }
-}
-const ret = transform({ filename: "App.tsx", code, importMap })
-console.log(ret.code)
+  },
+};
+const ret = transform({ filename: "/App.tsx", code, importMap });
+console.log(ret.code);
 ```
 
 More usage check [types/index.d.ts](./types/index.d.ts).
@@ -37,7 +37,7 @@ You will need [rust](https://www.rust-lang.org/tools/install) 1.60+ and
 ## Build
 
 ```bash
-wasm-pack build --target web --no-pack --release"
+wasm-pack build --target web --no-pack --release
 ```
 
 ## Run tests
