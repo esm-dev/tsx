@@ -117,7 +117,7 @@ pub fn transform(specifier: &str, source: &str, swc_transform_options: JsValue) 
   let jsx_import_source = if let Some(jsx_import_source) = options.jsx_import_source {
     Some(jsx_import_source)
   } else if let Some(importmap) = im {
-    // check `@jsxImportSource` in the import map
+    // check `jsxImportSource` from import map
     let referrer = if is_http_specifier(specifier) {
       Url::from_str(specifier).unwrap()
     } else {
