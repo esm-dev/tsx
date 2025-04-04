@@ -7,7 +7,7 @@ A TSX transpiler for esm.sh services, powered by [swc](https://swc.rs).
 ```js
 import init, { transform } from "https://esm.sh/@esm.sh/tsx";
 
-// initialize the wasm module
+// load tsx_bg.wasm
 await init();
 
 const code = `
