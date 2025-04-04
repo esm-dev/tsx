@@ -61,26 +61,14 @@ export interface TransformOptions {
    * ```
    */
   jsxImportSource?: string;
+  /** minify outputed code, default is disabled. */
+  minify?: boolean;
   /** strip unused code, default is disabled. */
   treeShaking?: boolean;
   /** create source map, default is disabled. */
   sourceMap?: "inline" | "external";
   /** development mode, default is disabled. */
   dev?: DevOptions;
-  /**
-   * The version map for the module resolver.
-   * ```json
-   * {
-   *   "versionMap": {
-   *     "*": "1.0.0",
-   *     "/src/main.tsx": "1.0.1"
-   *   }
-   * }
-   * - "*" is the default version for all modules, e.g. `/src/App.tsx?v=1.0.0`.
-   * - "/src/main.tsx" is the version for the specific module, e.g. `/src/main.tsx?v=1.0.1`.
-   * - http imports will ignore the version map.
-   */
-  versionMap?: Record<string, string>;
 }
 
 /** Transform result. */

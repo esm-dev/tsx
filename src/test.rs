@@ -1,7 +1,5 @@
-use serde_json::json;
-
 use super::*;
-use std::collections::HashMap;
+use serde_json::json;
 
 fn transform(specifer: &str, source: &str, options: &EmitOptions) -> (String, Option<String>, Rc<RefCell<Resolver>>) {
   let importmap = import_map::parse_from_value(
@@ -14,11 +12,8 @@ fn transform(specifer: &str, source: &str, options: &EmitOptions) -> (String, Op
     }),
   )
   .expect("could not pause the import map");
-  let mut version_map: HashMap<String, String> = HashMap::new();
-  version_map.insert("/foo.ts".into(), "2.0.0".into());
-  version_map.insert("*".into(), "1.0.0".into());
   let module = SWC::parse(specifer, source, None).expect("could not parse module");
-  let resolver = Rc::new(RefCell::new(Resolver::new(specifer, Some(importmap), Some(version_map))));
+  let resolver = Rc::new(RefCell::new(Resolver::new(specifer, Some(importmap))));
   let (code, source_map) = module.transform(resolver.clone(), options).unwrap();
   println!("{}", code);
   (code, source_map, resolver)
@@ -80,31 +75,40 @@ fn module_analyzer() {
     import "https://esm.sh/react-dom@18"
     import "https://esm.sh/react-dom@18?dev"
     import data from "/data.json" with { type: "json" };
+    import { fn } from "/rpc.ts" with { type: "rpc" };
     import "../../style/app.css"
-    import imgUrl from "./img.png"
+    import css from "../../style/app.css" with { type: "css" }
+    import imgUrl from "./img.png?url"
     import imgRaw from "./img.png?raw"
     import("react")
+    import("~/style/app.css")
+    import("~/style/app.css", { with: { type: "css" } })
   "#;
   let (code, _, _) = transform("/foo/bar/index.js", source, &EmitOptions::default());
   assert!(code.contains("import \"/@hmr\""));
   assert!(code.contains("from \"https://esm.sh/react@18\""));
   assert!(code.contains("from \"https://esm.sh/react@18/jsx-runtime\""));
-  assert!(code.contains("from \"/foo.ts?im=L2luZGV4Lmh0bWw&v=2.0.0\""));
-  assert!(code.contains("from \"./foo.vue?im=L2luZGV4Lmh0bWw&v=1.0.0\""));
-  assert!(code.contains("from \"./foo.svelte?im=L2luZGV4Lmh0bWw&v=1.0.0\""));
-  assert!(code.contains("from \"./foo.md?v=1.0.0\""));
-  assert!(code.contains("from \"./foo.md?jsx&im=L2luZGV4Lmh0bWw&v=1.0.0\""));
-  assert!(code.contains("from \"./foo.md?vue&im=L2luZGV4Lmh0bWw&v=1.0.0\""));
-  assert!(code.contains("from \"./foo.md?svelte&im=L2luZGV4Lmh0bWw&v=1.0.0\""));
-  assert!(code.contains("from \"./Layout.tsx?im=L2luZGV4Lmh0bWw&v=1.0.0\""));
+  assert!(code.contains("from \"/foo.ts?im=L2luZGV4Lmh0bWw\""));
+  assert!(code.contains("from \"./foo.vue?im=L2luZGV4Lmh0bWw\""));
+  assert!(code.contains("from \"./foo.svelte?im=L2luZGV4Lmh0bWw\""));
+  assert!(code.contains("from \"./foo.md\""));
+  assert!(code.contains("from \"./foo.md?jsx&im=L2luZGV4Lmh0bWw\""));
+  assert!(code.contains("from \"./foo.md?vue&im=L2luZGV4Lmh0bWw\""));
+  assert!(code.contains("from \"./foo.md?svelte&im=L2luZGV4Lmh0bWw\""));
+  assert!(code.contains("from \"./Layout.tsx?im=L2luZGV4Lmh0bWw\""));
   assert!(code.contains("import \"https://esm.sh/react-dom@18\""));
   assert!(code.contains("import \"https://esm.sh/react-dom@18?dev\""));
-  assert!(code.contains("import data from \"/data.json?v=1.0.0\" with {"));
+  assert!(code.contains("import data from \"/data.json\" with {"));
   assert!(code.contains("    type: \"json\""));
-  assert!(code.contains("import \"/style/app.css?module&v=1.0.0\""));
+  assert!(code.contains("import { fn } from \"/rpc.ts?im=L2luZGV4Lmh0bWw&rpc\";"));
+  assert!(code.contains("import \"/style/app.css?module\""));
+  assert!(code.contains("import css from \"/style/app.css\" with {"));
   assert!(code.contains("import imgUrl from \"./img.png?url\""));
   assert!(code.contains("import imgRaw from \"./img.png?raw\""));
   assert!(code.contains("import(\"https://esm.sh/react@18\")"));
+  assert!(code.contains("import(\"/style/app.css?module\")"));
+  assert!(code.contains("import(\"/style/app.css\", {"));
+  assert!(code.contains("    type: \"css\""));
 }
 
 #[test]
@@ -130,10 +134,7 @@ fn tsx() {
   assert!(code.contains("_jsx(_Fragment, {"));
   assert!(code.contains("_jsx(\"h1\", {"));
   assert!(code.contains("children: \"Hello world!\""));
-  assert_eq!(
-    resolver.borrow().deps.get(0).unwrap().0,
-    "https://esm.sh/react@18/jsx-runtime"
-  );
+  assert_eq!(resolver.borrow().deps.get(0).unwrap().0, "https://esm.sh/react@18/jsx-runtime");
 }
 
 #[test]
@@ -253,7 +254,9 @@ fn source_map() {
   );
   assert!(!code.contains("//# sourceMappingURL="));
   assert!(source_map.is_some());
-  assert!(source_map
-    .unwrap()
-    .contains("\"sourcesContent\":[\"\\n    const foo:string = \\\"bar\\\"\\n  \"]"));
+  assert!(
+    source_map
+      .unwrap()
+      .contains("\"sourcesContent\":[\"\\n    const foo:string = \\\"bar\\\"\\n  \"]")
+  );
 }

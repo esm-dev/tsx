@@ -32,6 +32,7 @@ pub struct EmitOptions {
   pub dev: Option<DevOptions>,
   pub target: EsVersion,
   pub jsx_import_source: Option<String>,
+  pub minify: bool,
   pub tree_shaking: bool,
 }
 
@@ -42,6 +43,7 @@ impl Default for EmitOptions {
       dev: None,
       target: EsVersion::Es2022,
       jsx_import_source: None,
+      minify: false,
       tree_shaking: false,
     }
   }
@@ -243,7 +245,7 @@ impl SWC {
       JsWriter::new(self.source_map.clone(), "\n", &mut js_buf, None)
     };
     let mut emitter = Emitter {
-      cfg: Config::default().with_target(options.target).with_minify(false),
+      cfg: Config::default().with_target(options.target).with_minify(options.minify),
       comments: Some(&self.comments),
       cm: self.source_map.clone(),
       wr: writer,

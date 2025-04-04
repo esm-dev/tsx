@@ -1,6 +1,24 @@
-use swc_common::{SyntaxContext, DUMMY_SP};
+use swc_common::{DUMMY_SP, SyntaxContext};
 use swc_ecmascript::ast::*;
 use swc_ecmascript::utils::quote_ident;
+
+pub fn get_object_value<'a>(obj: &'a ObjectLit, key: &str) -> Option<&'a Expr> {
+  obj.props.iter().find_map(|prop| match prop {
+    PropOrSpread::Prop(kv) => {
+      if let Prop::KeyValue(KeyValueProp {
+        key: PropName::Ident(ident),
+        value,
+      }) = kv.as_ref()
+      {
+        if ident.sym.eq(key) {
+          return Some(value.as_ref());
+        }
+      }
+      None
+    }
+    _ => None,
+  })
+}
 
 pub fn assign_decl(var_name: &str, expr: Expr) -> ModuleItem {
   ModuleItem::Stmt(Stmt::Decl(Decl::Var(Box::new(VarDecl {

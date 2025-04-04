@@ -27,9 +27,25 @@ impl Fold for ImportAnalyzer {
                 ModuleItem::ModuleDecl(ModuleDecl::Import(import_decl))
               } else {
                 let mut resolver = self.resolver.borrow_mut();
-                let resolved_url = resolver.resolve(import_decl.src.value.as_ref());
+                let with_type = if let Some(with) = import_decl.with.as_ref() {
+                  if let Some(Expr::Lit(Lit::Str(s))) = get_object_value(with, "type") {
+                    Some(s.value.to_string())
+                  } else {
+                    None
+                  }
+                } else {
+                  None
+                };
+                // remove `with { type: "rpc" }` from import declaration
+                let with = if with_type.as_ref().is_none_or(|e| e != "rpc") {
+                  import_decl.with
+                } else {
+                  None
+                };
+                let resolved_url = resolver.resolve(import_decl.src.value.as_ref(), with_type);
                 ModuleItem::ModuleDecl(ModuleDecl::Import(ImportDecl {
                   src: Box::new(new_str(&resolved_url)),
+                  with,
                   ..import_decl
                 }))
               }
@@ -54,7 +70,7 @@ impl Fold for ImportAnalyzer {
                 }))
               } else {
                 let mut resolver = self.resolver.borrow_mut();
-                let resolved_url = resolver.resolve(src.value.as_ref());
+                let resolved_url = resolver.resolve(src.value.as_ref(), None);
                 ModuleItem::ModuleDecl(ModuleDecl::ExportNamed(NamedExport {
                   span,
                   specifiers,
@@ -67,7 +83,7 @@ impl Fold for ImportAnalyzer {
             // match: export * from "https://esm.sh/react"
             ModuleDecl::ExportAll(export_all) => {
               let mut resolver = self.resolver.borrow_mut();
-              let resolved_url = resolver.resolve(export_all.src.value.as_ref());
+              let resolved_url = resolver.resolve(export_all.src.value.as_ref(), None);
               ModuleItem::ModuleDecl(ModuleDecl::ExportAll(ExportAll {
                 src: Box::new(new_str(&resolved_url)),
                 ..export_all
@@ -91,25 +107,33 @@ impl Fold for ImportAnalyzer {
     if is_call_expr_by_name(&call, "import") {
       let src = match call.args.first() {
         Some(ExprOrSpread { expr, .. }) => match expr.as_ref() {
-          Expr::Lit(lit) => match lit {
-            Lit::Str(s) => Some(s),
-            _ => None,
-          },
+          Expr::Lit(Lit::Str(s)) => Some(s),
           _ => None,
         },
         _ => None,
       };
       if let Some(src) = src {
         let mut resolver = self.resolver.borrow_mut();
-        let new_src = resolver.resolve(src.value.as_ref());
-
+        let with_type = match call.args.get(1) {
+          Some(ExprOrSpread { expr, .. }) => match expr.as_ref() {
+            Expr::Object(obj) => match get_object_value(obj, "with") {
+              Some(Expr::Object(obj)) => match get_object_value(obj, "type") {
+                Some(Expr::Lit(Lit::Str(s))) => Some(s.value.to_string()),
+                _ => None,
+              },
+              _ => None,
+            },
+            _ => None,
+          },
+          _ => None,
+        };
+        let new_src = resolver.resolve(src.value.as_ref(), with_type);
         call.args[0] = ExprOrSpread {
           spread: None,
           expr: Box::new(Expr::Lit(Lit::Str(new_str(&new_src)))),
         }
       }
     }
-
     call.fold_children_with(self)
   }
 }

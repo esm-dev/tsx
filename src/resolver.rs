@@ -3,7 +3,6 @@ use crate::specifier::{is_abspath_specifier, is_http_specifier, is_relpath_speci
 use base64::{Engine as _, engine::general_purpose};
 use path_slash::PathBufExt;
 use pathdiff::diff_paths;
-use std::collections::HashMap;
 use std::path::{Path, PathBuf};
 use std::str::FromStr;
 use url::Url;
@@ -14,25 +13,22 @@ pub struct Resolver {
   pub specifier: String,
   /// a ordered dependencies of the module
   pub deps: Vec<(String, String)>,
-  /// the graph versions
-  pub version_map: Option<HashMap<String, String>>,
   /// the import map
   pub import_map: Option<ImportMap>,
 }
 
 impl Resolver {
   /// Create a new Resolver.
-  pub fn new(specifier: &str, import_map: Option<ImportMap>, version_map: Option<HashMap<String, String>>) -> Self {
+  pub fn new(specifier: &str, import_map: Option<ImportMap>) -> Self {
     Resolver {
       specifier: specifier.into(),
       deps: Vec::new(),
       import_map,
-      version_map,
     }
   }
 
   /// Resolve module specifier to a URL.
-  pub fn resolve(&mut self, specifier: &str) -> String {
+  pub fn resolve(&mut self, specifier: &str, with_type: Option<String>) -> String {
     let referrer = if is_http_specifier(&self.specifier) {
       Url::from_str(self.specifier.as_str()).unwrap()
     } else {
@@ -80,23 +76,36 @@ impl Resolver {
       None
     };
 
-    if is_filepath
-      && !raw_query
-        .as_ref()
-        .is_some_and(|q| q.iter().any(|p| p == "url" || p == "raw" || p == "rpc"))
-    {
+    let mut flag_raw_url = false;
+    let mut flag_jsx_vue_sevlte = false;
+    let mut flag_rpc = false;
+    if let Some(query) = raw_query.as_ref() {
+      for q in query.iter() {
+        match q.as_str() {
+          "raw" | "url" => {
+            flag_raw_url = true;
+          }
+          "jsx" | "vue" | "svelte" => {
+            flag_jsx_vue_sevlte = true;
+          }
+          "rpc" => {
+            flag_rpc = true;
+          }
+          _ => {}
+        }
+      }
+    }
+
+    if is_filepath && !flag_raw_url {
       if let Some(ext) = Path::new(&resolved_url).extension() {
         let extname = ext.to_str().unwrap();
         match extname {
           "js" | "mjs" | "ts" | "mts" | "jsx" | "tsx" | "vue" | "svelte" | "css" | "json" | "md" => {
             if extname == "css" {
-              extra_query = Some("module".to_owned());
-            } else if extname != "json"
-              && (extname != "md"
-                || raw_query
-                  .as_ref()
-                  .is_some_and(|q| q.iter().any(|p| p == "jsx" || p == "vue" || p == "svelte")))
-            {
+              if with_type.is_none() {
+                extra_query = Some("module".to_owned());
+              }
+            } else if extname != "json" && (extname != "md" || flag_jsx_vue_sevlte) {
               if let Some(base_url) = self.import_map.as_ref().map(|im| im.base_url()) {
                 let base_path = base_url.path();
                 if !base_path.eq("/anonymous_import_map.json") {
@@ -105,27 +114,17 @@ impl Resolver {
                 }
               }
             }
-            let mut version: Option<&String> = None;
-            if let Some(version_map) = &self.version_map {
-              let fullpath = referrer.join(&resolved_url).unwrap().path().to_owned();
-              if version_map.contains_key(&fullpath) {
-                version = version_map.get(&fullpath)
-              } else {
-                version = version_map.get("*")
-              }
-            };
-            if let Some(version) = version {
-              if let Some(q) = extra_query {
-                extra_query = Some(q + "&v=" + version.as_str());
-              } else {
-                extra_query = Some("v=".to_owned() + version.as_str());
-              }
-            }
           }
-          _ => {
-            extra_query = Some("url".to_owned());
-          }
+          _ => {}
         }
+      }
+    }
+
+    if with_type.is_some_and(|t| t == "rpc") && !flag_rpc {
+      if extra_query.is_none() {
+        extra_query = Some("rpc".to_owned());
+      } else {
+        extra_query = Some(extra_query.unwrap() + "&rpc");
       }
     }
 

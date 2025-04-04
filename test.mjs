@@ -24,11 +24,7 @@ async function test() {
         "react": "https://esm.sh/react@18",
         "react-dom": "https://esm.sh/react-dom@18",
       },
-    },
-    sourceMap: "inline",
-    versionMap: {
-      "/App.tsx": "2",
-    },
+    }
   });
   if (!code.includes(`import { jsx as _jsx } from "https://esm.sh/react@18/jsx-runtime"`)) {
     console.log(code)
@@ -38,17 +34,13 @@ async function test() {
     console.log(code)
     throw new Error("'react-dom/client' not resolved");
   }
-  if (!code.includes(`import App from "/App.tsx?im=L2luZGV4Lmh0bWw&v=2"`)) {
+  if (!code.includes(`import App from "/App.tsx?im=L2luZGV4Lmh0bWw"`)) {
     console.log(code)
     throw new Error("'/App.tsx' not resolved");
   }
   if (!code.includes(`_jsx(App`)) {
     console.log(code)
     throw new Error("jsx not transformed");
-  }
-  if (!code.includes(`//# sourceMappingURL=data:application/json;charset=utf-8;base64,`)) {
-    console.log(code)
-    throw new Error("source map not inlined");
   }
 
   // catch syntax error

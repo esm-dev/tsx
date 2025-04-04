@@ -17,7 +17,6 @@ use resolver::Resolver;
 use serde::{Deserialize, Serialize};
 use specifier::is_http_specifier;
 use std::cell::RefCell;
-use std::collections::HashMap;
 use std::rc::Rc;
 use std::str::FromStr;
 use swc::{EmitOptions, SWC};
@@ -34,9 +33,8 @@ pub struct SWCTransformOptions {
   pub dev: Option<DevOptions>,
   pub target: Option<String>,
   pub jsx_import_source: Option<String>,
-  pub keep_names: Option<bool>,
+  pub minify: Option<bool>,
   pub tree_shaking: Option<bool>,
-  pub version_map: Option<HashMap<String, String>>,
 }
 
 impl Default for SWCTransformOptions {
@@ -48,9 +46,8 @@ impl Default for SWCTransformOptions {
       dev: None,
       target: None,
       jsx_import_source: None,
-      keep_names: None,
+      minify: None,
       tree_shaking: None,
-      version_map: None,
     }
   }
 }
@@ -94,7 +91,7 @@ pub fn transform(specifier: &str, source: &str, swc_transform_options: JsValue) 
   } else {
     None
   };
-  let resolver = Rc::new(RefCell::new(Resolver::new(specifier, im.to_owned(), options.version_map)));
+  let resolver = Rc::new(RefCell::new(Resolver::new(specifier, im.to_owned() )));
   let target = match options.target.unwrap_or("esnext".into()).to_lowercase().as_str() {
     "es2015" => EsVersion::Es2015,
     "es2016" => EsVersion::Es2016,
@@ -152,6 +149,7 @@ pub fn transform(specifier: &str, source: &str, swc_transform_options: JsValue) 
     jsx_import_source,
     source_map,
     dev: options.dev,
+    minify: options.minify.unwrap_or_default(),
     tree_shaking: options.tree_shaking.unwrap_or_default(),
   };
   let (code, map) = match module.transform(resolver.clone(), &emit_options) {
