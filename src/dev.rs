@@ -127,7 +127,7 @@ impl Fold for Dev {
             callee: Callee::Expr(Box::new(simple_member_expr("__REFRESH_RUNTIME__", "register"))),
             args: vec![ExprOrSpread {
               spread: None,
-              expr: Box::new(Expr::Lit(Lit::Str(new_str(&resolver.specifier)))),
+              expr: Box::new(Expr::Lit(Lit::Str(new_str(&resolver.filename)))),
             }],
             type_args: None,
           }),

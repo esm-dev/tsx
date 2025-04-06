@@ -33,6 +33,10 @@ export interface DevOptions {
 
 /** Transform options. */
 export interface TransformOptions {
+  /** The file name, used for source map and error message. */
+  filename: string;
+  /** The code to transform. */
+  code: string | Uint8Array;
   /** The code language, default is using the file extension. */
   lang?: "ts" | "tsx" | "js" | "jsx";
   /** The transform target, default is "esnext". */
@@ -73,12 +77,14 @@ export interface TransformOptions {
 
 /** Transform result. */
 export interface TransformResult {
-  readonly code: string;
-  readonly map?: string;
+  /** The transformed JavaScript code. */
+  readonly code: Uint8Array;
+  /** The generated source map, if the `sourceMap` option is enabled as `external`. */
+  readonly map?: Uint8Array;
 }
 
 /** Transforms the given code. */
-export function transform(options: { filename: string; code: string } & TransformOptions): TransformResult;
+export function transform(options: TransformOptions): TransformResult;
 
 /** Instantiates the given `module`, which can either be bytes or a precompiled `WebAssembly.Module`. */
 export function initSync(module: BufferSource | WebAssembly.Module): { memory: WebAssembly.Memory };

@@ -10,7 +10,7 @@ use url::Url;
 /// A Resolver to resolve esm import/export URL.
 pub struct Resolver {
   /// the text specifier associated with the import/export statement.
-  pub specifier: String,
+  pub filename: String,
   /// a ordered dependencies of the module
   pub deps: Vec<(String, String)>,
   /// the import map
@@ -21,7 +21,7 @@ impl Resolver {
   /// Create a new Resolver.
   pub fn new(specifier: &str, import_map: Option<ImportMap>) -> Self {
     Resolver {
-      specifier: specifier.into(),
+      filename: specifier.into(),
       deps: Vec::new(),
       import_map,
     }
@@ -29,10 +29,10 @@ impl Resolver {
 
   /// Resolve module specifier to a URL.
   pub fn resolve(&mut self, specifier: &str, with_type: Option<String>) -> String {
-    let referrer = if is_http_specifier(&self.specifier) {
-      Url::from_str(self.specifier.as_str()).unwrap()
+    let referrer = if is_http_specifier(&self.filename) {
+      Url::from_str(self.filename.as_str()).unwrap()
     } else {
-      Url::from_str(&("file://".to_owned() + self.specifier.as_str())).unwrap()
+      Url::from_str(&("file://".to_owned() + self.filename.as_str())).unwrap()
     };
     let resolved_url = if let Some(import_map) = &self.import_map {
       if let Ok(ret) = import_map.resolve(specifier, &referrer) {
@@ -45,8 +45,8 @@ impl Resolver {
     };
     let mut resolved_url = if resolved_url.starts_with("file://") {
       let pathname = resolved_url.strip_prefix("file://").unwrap();
-      if !is_http_specifier(&self.specifier) {
-        let mut buf = PathBuf::from(self.specifier.to_owned());
+      if !is_http_specifier(&self.filename) {
+        let mut buf = PathBuf::from(self.filename.to_owned());
         buf.pop();
         let path = diff_paths(&pathname, buf).unwrap().to_slash().unwrap().to_string();
         let rel_path = if !path.starts_with("./") && !path.starts_with("../") {

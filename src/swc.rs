@@ -79,14 +79,14 @@ pub struct SWC {
 
 impl SWC {
   /// Parse a module from a string.
-  pub fn parse(specifier: &str, source: &str, lang: Option<String>) -> Result<Self, DiagnosticBuffer> {
-    let syntax = get_syntax(specifier, lang);
+  pub fn parse(filename: &str, source: &str, lang: Option<String>) -> Result<Self, DiagnosticBuffer> {
+    let syntax = get_syntax(filename, lang);
     let source_map = SourceMap::default();
-    let source_file = source_map.new_source_file(FileName::Real(Path::new(specifier).to_path_buf()).into(), source.into());
+    let source_file = source_map.new_source_file(FileName::Real(Path::new(filename).to_path_buf()).into(), source.into());
     let input = StringInput::from(&*source_file);
     let comments = SingleThreadedComments::default();
     let lexer = lexer::Lexer::new(syntax, EsVersion::EsNext, input, Some(&comments));
-    let error_buffer = ErrorBuffer::new(specifier);
+    let error_buffer = ErrorBuffer::new(filename);
     let handler = Handler::with_emitter_and_flags(
       Box::new(error_buffer.clone()),
       HandlerFlags {
@@ -111,7 +111,7 @@ impl SWC {
   }
 
   /// Transform the module to JavaScript and optionally generate a source map.
-  pub fn transform(self, resolver: Rc<RefCell<Resolver>>, options: &EmitOptions) -> Result<(String, Option<String>), EmitError> {
+  pub fn transform(self, resolver: Rc<RefCell<Resolver>>, options: &EmitOptions) -> Result<(Vec<u8>, Option<Vec<u8>>), EmitError> {
     swc_common::GLOBALS.set(&Globals::new(), || {
       let pass = self.build_pass(resolver.clone(), options);
       let (code, map) = self.emit(pass, options)?;
@@ -122,7 +122,7 @@ impl SWC {
   fn build_pass<'a>(&'a self, resolver: Rc<RefCell<Resolver>>, options: &EmitOptions) -> impl Pass + 'a {
     let top_level_mark = Mark::new();
     let unresolved_mark = Mark::new();
-    let specifier = resolver.borrow().specifier.clone();
+    let specifier = resolver.borrow().filename.clone();
     let is_ts = if let Syntax::Typescript(ts) = self.syntax { !ts.tsx } else { false };
     let is_tsx = if let Syntax::Typescript(ts) = self.syntax { ts.tsx } else { false };
     let is_jsx = if let Syntax::Es(es) = self.syntax { es.jsx } else { false };
@@ -233,7 +233,7 @@ impl SWC {
     )
   }
 
-  fn emit<P: Pass>(&self, pass: P, options: &EmitOptions) -> Result<(String, Option<String>), EmitError> {
+  fn emit<P: Pass>(&self, pass: P, options: &EmitOptions) -> Result<(Vec<u8>, Option<Vec<u8>>), EmitError> {
     let program = Program::Module(self.module.clone());
     let program = helpers::HELPERS.set(&helpers::Helpers::new(false), || program.apply(pass));
     let mut js_buf = Vec::new();
@@ -254,8 +254,6 @@ impl SWC {
         message: format!("failed to emit code: {}", error),
       });
     }
-
-    let js = String::from_utf8(js_buf).expect("invalid utf8 character detected");
     if let Some(sm) = &options.source_map {
       let mut source_map_json = Vec::new();
       if let Err(error) = self
@@ -268,23 +266,15 @@ impl SWC {
         });
       }
       if sm.eq("inline") {
-        let mut src = js;
-        src.push_str("\n//# sourceMappingURL=data:application/json;charset=utf-8;base64,");
-        src.push_str(&general_purpose::STANDARD.encode(source_map_json));
-        Ok((src, None))
+        let mut inline_sm = "\n//# sourceMappingURL=data:application/json;charset=utf-8;base64,".to_owned();
+        inline_sm.push_str(&general_purpose::STANDARD.encode(source_map_json));
+        js_buf.append(&mut inline_sm.as_bytes().to_vec());
+        Ok((js_buf, None))
       } else {
-        let source_map_json_string = match String::from_utf8(source_map_json) {
-          Ok(str) => str,
-          Err(error) => {
-            return Err(EmitError {
-              message: format!("failed to convert source map to string: {}", error),
-            });
-          }
-        };
-        Ok((js, Some(source_map_json_string)))
+        Ok((js_buf, Some(source_map_json)))
       }
     } else {
-      Ok((js, None))
+      Ok((js_buf, None))
     }
   }
 }

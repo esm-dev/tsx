@@ -18,7 +18,7 @@ use serde::{Deserialize, Serialize};
 use specifier::is_http_specifier;
 use std::cell::RefCell;
 use std::rc::Rc;
-use std::str::FromStr;
+use std::str::{FromStr, from_utf8_unchecked};
 use swc::{EmitOptions, SWC};
 use swc_ecmascript::ast::EsVersion;
 use url::Url;
@@ -27,6 +27,9 @@ use wasm_bindgen::prelude::*;
 #[derive(Deserialize)]
 #[serde(deny_unknown_fields, rename_all = "camelCase")]
 pub struct SWCTransformOptions {
+  pub filename: String,
+  #[serde(with = "serde_bytes")]
+  pub code: Vec<u8>,
   pub lang: Option<String>,
   pub source_map: Option<String>,
   pub import_map: Option<serde_json::Value>,
@@ -37,33 +40,20 @@ pub struct SWCTransformOptions {
   pub tree_shaking: Option<bool>,
 }
 
-impl Default for SWCTransformOptions {
-  fn default() -> Self {
-    Self {
-      lang: None,
-      source_map: None,
-      import_map: None,
-      dev: None,
-      target: None,
-      jsx_import_source: None,
-      minify: None,
-      tree_shaking: None,
-    }
-  }
-}
-
 #[derive(Serialize)]
 pub struct SWCTransformOutput {
-  pub code: String,
-  #[serde(skip_serializing_if = "Option::is_none")]
-  pub map: Option<String>,
+  #[serde(with = "serde_bytes")]
+  code: Vec<u8>,
+  #[serde(with = "serde_bytes")]
+  map: Option<Vec<u8>>,
 }
 
 #[wasm_bindgen(js_name = "transform")]
-pub fn transform(specifier: &str, source: &str, swc_transform_options: JsValue) -> Result<JsValue, JsError> {
-  let options: SWCTransformOptions = serde_wasm_bindgen::from_value(swc_transform_options).unwrap_or_default();
+pub fn transform(swc_transform_options: JsValue) -> Result<JsValue, JsError> {
+  let options: SWCTransformOptions = serde_wasm_bindgen::from_value(swc_transform_options).expect("could not parse options");
+  let filename = options.filename.as_str();
   let im = if let Some(import_map_raw) = options.import_map {
-    let src = if let Some(src) = import_map_raw.as_object().unwrap().get("$src") {
+    let im_src = if let Some(src) = import_map_raw.as_object().unwrap().get("$src") {
       src.as_str().map(|s| {
         if s.starts_with('/') {
           "file://".to_owned() + s
@@ -74,11 +64,11 @@ pub fn transform(specifier: &str, source: &str, swc_transform_options: JsValue) 
     } else {
       None
     };
-    let src = match Url::from_str(src.clone().unwrap_or("file:///anonymous_import_map.json".to_owned()).as_str()) {
+    let src = match Url::from_str(im_src.clone().unwrap_or("file:///anonymous_import_map.json".to_owned()).as_str()) {
       Ok(url) => url,
       Err(_) => {
         return Err(
-          JsError::new(("Invalid \"$src\" in import map, must be a valid URL but got ".to_owned() + src.unwrap().as_str()).as_str()).into(),
+          JsError::new(("Invalid \"$src\" in import map, must be a valid URL but got ".to_owned() + im_src.unwrap().as_str()).as_str()).into(),
         );
       }
     };
@@ -91,7 +81,7 @@ pub fn transform(specifier: &str, source: &str, swc_transform_options: JsValue) 
   } else {
     None
   };
-  let resolver = Rc::new(RefCell::new(Resolver::new(specifier, im.to_owned())));
+  let resolver = Rc::new(RefCell::new(Resolver::new(filename, im.to_owned())));
   let target = match options.target.unwrap_or("esnext".into()).to_lowercase().as_str() {
     "es2015" => EsVersion::Es2015,
     "es2016" => EsVersion::Es2016,
@@ -108,7 +98,8 @@ pub fn transform(specifier: &str, source: &str, swc_transform_options: JsValue) 
       return Err(JsError::new(("Invalid target: ".to_owned() + t).as_str()).into());
     }
   };
-  let module = match SWC::parse(specifier, source, options.lang) {
+  let code = unsafe { from_utf8_unchecked(&options.code) };
+  let module = match SWC::parse(filename, code, options.lang) {
     Ok(ret) => ret,
     Err(err) => {
       return Err(JsError::new(&err.to_string()).into());
@@ -118,10 +109,10 @@ pub fn transform(specifier: &str, source: &str, swc_transform_options: JsValue) 
     Some(jsx_import_source)
   } else if let Some(importmap) = im {
     // check `jsxImportSource` from import map
-    let referrer = if is_http_specifier(specifier) {
-      Url::from_str(specifier).unwrap()
+    let referrer = if is_http_specifier(filename) {
+      Url::from_str(filename).unwrap()
     } else {
-      Url::from_str(&("file://".to_owned() + specifier.trim_start_matches('.'))).unwrap()
+      Url::from_str(&("file://".to_owned() + filename.trim_start_matches('.'))).unwrap()
     };
     if let Ok(resolved) = importmap.resolve("@jsxRuntime", &referrer) {
       Some(resolved.to_string())

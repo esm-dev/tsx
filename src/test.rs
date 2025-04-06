@@ -1,7 +1,7 @@
 use super::*;
 use serde_json::json;
 
-fn transform(specifer: &str, source: &str, options: &EmitOptions) -> (String, Option<String>, Rc<RefCell<Resolver>>) {
+fn transform(filename: &str, source: &str, options: &EmitOptions) -> (String, Option<String>, Rc<RefCell<Resolver>>) {
   let importmap = import_map::parse_from_value(
     Url::from_str("file:///index.html").unwrap(),
     json!({
@@ -12,9 +12,15 @@ fn transform(specifer: &str, source: &str, options: &EmitOptions) -> (String, Op
     }),
   )
   .expect("could not pause the import map");
-  let module = SWC::parse(specifer, source, None).expect("could not parse module");
-  let resolver = Rc::new(RefCell::new(Resolver::new(specifer, Some(importmap))));
+  let module = SWC::parse(filename, source, None).expect("could not parse module");
+  let resolver = Rc::new(RefCell::new(Resolver::new(filename, Some(importmap))));
   let (code, source_map) = module.transform(resolver.clone(), options).unwrap();
+  let code = unsafe { std::str::from_utf8_unchecked(&code).to_string() };
+  let source_map = if let Some(source_map) = source_map {
+    Some(unsafe { std::str::from_utf8_unchecked(&source_map).to_string() })
+  } else {
+    None
+  };
   println!("{}", code);
   (code, source_map, resolver)
 }
