@@ -68,7 +68,8 @@ pub fn transform(swc_transform_options: JsValue) -> Result<JsValue, JsError> {
       Ok(url) => url,
       Err(_) => {
         return Err(
-          JsError::new(("Invalid \"$src\" in import map, must be a valid URL but got ".to_owned() + im_src.unwrap().as_str()).as_str()).into(),
+          JsError::new(("Invalid \"$src\" in import map, must be a valid URL but got ".to_owned() + im_src.unwrap().as_str()).as_str())
+            .into(),
         );
       }
     };

@@ -1,6 +1,6 @@
 import { readFile } from "node:fs/promises";
-import init, { transform } from "./pkg/tsx.js";
 import { CompressionStream } from "node:stream/web";
+import init, { transform } from "./pkg/tsx.js";
 
 async function load() {
   const wasmData = await readFile(new URL("./pkg/tsx_bg.wasm", import.meta.url));
