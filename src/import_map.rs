@@ -424,8 +424,10 @@ fn resolve_imports_match(specifier_map: &SpecifierMap, normalized_specifier: &st
     return Ok(Some(url));
   }
 
-  // expand match
-  // e.g. `"react": "https://esm.sh/react@18` -> `"react/": "https://esm.sh/react@18/`
+  // expand-match
+  // expand specifiers with tailing slash
+  // e.g. "react": "https://esm.sh/react",
+  //      "react/": "https://esm.sh/react/" (expanded)
   if !specifier::is_http_specifier(normalized_specifier)
     && !specifier::is_relpath_specifier(normalized_specifier)
     && !specifier::is_abspath_specifier(normalized_specifier)
