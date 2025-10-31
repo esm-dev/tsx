@@ -6,6 +6,7 @@ use crate::specifier::is_http_specifier;
 use crate::swc_jsx_src::jsx_source;
 use crate::swc_prefresh::swc_prefresh;
 use base64::{Engine as _, engine::general_purpose};
+use bytes_str::BytesStr;
 use std::cell::RefCell;
 use std::fmt;
 use std::path::Path;
@@ -82,7 +83,10 @@ impl SWC {
   pub fn parse(filename: &str, source: &str, lang: Option<String>) -> Result<Self, DiagnosticBuffer> {
     let syntax = get_syntax(filename, lang);
     let source_map = SourceMap::default();
-    let source_file = source_map.new_source_file(FileName::Real(Path::new(filename).to_path_buf()).into(), source.into());
+    let source_file = source_map.new_source_file(
+      FileName::Real(Path::new(filename).to_path_buf()).into(),
+      BytesStr::from_str_slice(source),
+    );
     let input = StringInput::from(&*source_file);
     let comments = SingleThreadedComments::default();
     let lexer = lexer::Lexer::new(syntax, EsVersion::EsNext, input, Some(&comments));
@@ -258,7 +262,7 @@ impl SWC {
       let mut source_map_json = Vec::new();
       if let Err(error) = self
         .source_map
-        .build_source_map_with_config(&mut mappings, None, SourceMapGenOptions {})
+        .build_source_map(&mut mappings, None, SourceMapGenOptions {})
         .to_writer(&mut source_map_json)
       {
         return Err(EmitError {
