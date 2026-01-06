@@ -37,8 +37,8 @@ async function test() {
     importMap: {
       "$src": "file:///index.html",
       "imports": {
-        "react": "https://esm.sh/react@18",
-        "react-dom": "https://esm.sh/react-dom@18",
+        "react/": "https://esm.sh/react@18/",
+        "react-dom/": "https://esm.sh/react-dom@18/",
       },
     },
     sourceMap: "inline",
@@ -73,7 +73,7 @@ async function test() {
       code: enc.encode(source),
     });
   } catch (error) {
-    if (error.message !== "Expected '{', got 'App' at /source.ts:1:7") {
+    if (error.message !== "Expected '{', got 'ident' at /source.ts:1:7") {
       throw error;
     }
   }
