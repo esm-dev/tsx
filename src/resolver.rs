@@ -1,6 +1,6 @@
-use crate::import_map::ImportMap;
 use crate::specifier::{is_abspath_specifier, is_http_specifier, is_relpath_specifier};
 use base64::{Engine as _, engine::general_purpose};
+use import_map::ImportMap;
 use path_slash::PathBufExt;
 use pathdiff::diff_paths;
 use std::path::{Path, PathBuf};

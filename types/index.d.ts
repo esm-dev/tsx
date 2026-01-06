@@ -13,6 +13,7 @@ export interface DevOptions {
    * // the injected code
    * import __CREATE_HOT_CONTEXT__ from "hmr_runtime"
    * import.meta.hot = __CREATE_HOT_CONTEXT__(import.meta.url)
+   * ```
    */
   hmr?: { runtime: string };
   /**
@@ -44,12 +45,12 @@ export interface TransformOptions {
   /** The import map, pass it if the browser does not support import maps. */
   importMap?: ImportMap;
   /**
-   * Specifies the JSX import source. By default, it will use `react` or `preact` from the import map.
+   * Specifies the JSX import source. By default, it will use `react/` or `preact/` from the import map.
    *
    * ```json
    * {
    *   "importMap": {
-   *     "imports": { "react": "https://esm.sh/react" }
+   *     "imports": { "react/": "https://esm.sh/react/" }
    *   }
    * }
    * ```

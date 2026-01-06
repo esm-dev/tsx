@@ -21,6 +21,7 @@ export default App() {
 const importMap = {
   imports: {
     "react": "https://esm.sh/react@19.0.0",
+    "react/": "https://esm.sh/react@19.0.0/",
   },
 };
 const ret = transform({ filename: "/App.tsx", code, importMap });

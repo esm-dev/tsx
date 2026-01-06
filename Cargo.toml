@@ -8,29 +8,30 @@ crate-type = ["cdylib", "rlib"]
 
 [dependencies]
 base64 = "0.22.1"
-indexmap = { version = "2.12.0", features = ["serde"] }
+indexmap = { version = "2.12.1", features = ["serde"] }
+import_map = "0.24.0"
 path-slash = "0.2.1"
 pathdiff = "0.2.3"
 bytes-str = "0.2.7"
 percent-encoding = "2.3.2"
 serde = { version = "1.0.228", features = ["derive"] }
 serde_bytes = "0.11.19"
-serde_json = { version = "1.0.145", features = ["preserve_order"] }
+serde_json = { version = "1.0.148", features = ["preserve_order"] }
 thiserror = "2.0.17"
-url = { version = "2.5.7", features = ["serde"] }
+url = { version = "2.5.8", features = ["serde"] }
 
 # swc
 # docs: https://swc.rs
 # crate: https://crates.io/search?q=swc_ecmascript
-swc_atoms = "8.0.2"
-swc_core = { version = "46.0.3", features = ["ecma_quote" ] }
-swc_common = { version = "16.0.0", features = ["sourcemap"] }
-swc_ecmascript = { version = "42.0.0", features = ["codegen", "parser", "utils", "visit", "quote"] }
-swc_ecma_transforms = { version = "37.0.0", features = ["proposal", "typescript", "react", "optimization"] }
+swc_atoms = "9.0.0"
+swc_core = { version = "54.0.0", features = ["ecma_quote" ] }
+swc_common = { version = "18.0.1", features = ["sourcemap"] }
+swc_ecmascript = { version = "50.0.0", features = ["codegen", "parser", "utils", "visit", "quote"] }
+swc_ecma_transforms = { version = "44.0.0", features = ["proposal", "typescript", "react", "optimization"] }
 
 # wasm-bindgen
 # docs: https://rustwasm.github.io/docs/wasm-bindgen
-wasm-bindgen = { version = "0.2.105" }
+wasm-bindgen = { version = "0.2.106" }
 serde-wasm-bindgen = "0.6.5"
 
 [profile.release]

@@ -1,7 +1,6 @@
 mod dev;
 mod error;
 mod import_analyzer;
-mod import_map;
 mod resolver;
 mod specifier;
 mod swc;
@@ -74,7 +73,7 @@ pub fn transform(swc_transform_options: JsValue) -> Result<JsValue, JsError> {
       }
     };
     match import_map::parse_from_value(src, import_map_raw) {
-      Ok(import_map) => Some(import_map),
+      Ok(import_map) => Some(import_map.import_map),
       Err(e) => {
         return Err(JsError::new(&e.to_string()).into());
       }
@@ -117,10 +116,10 @@ pub fn transform(swc_transform_options: JsValue) -> Result<JsValue, JsError> {
     };
     if let Ok(resolved) = importmap.resolve("@jsxRuntime", &referrer) {
       Some(resolved.to_string())
-    } else if let Ok(resolved) = importmap.resolve("preact", &referrer) {
-      Some(resolved.to_string())
-    } else if let Ok(resolved) = importmap.resolve("react", &referrer) {
-      Some(resolved.to_string())
+    } else if let Ok(resolved) = importmap.resolve("react/jsx-runtime", &referrer) {
+      Some(resolved.to_string().trim_end_matches("/jsx-runtime").to_string())
+    } else if let Ok(resolved) = importmap.resolve("preact/jsx-runtime", &referrer) {
+      Some(resolved.to_string().trim_end_matches("/jsx-runtime").to_string())
     } else {
       None
     }

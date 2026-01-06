@@ -7,13 +7,14 @@ fn transform(filename: &str, source: &str, options: &EmitOptions) -> (String, Op
     json!({
       "imports": {
         "~/": "./",
-        "react": "https://esm.sh/react@18"
+        "react": "https://esm.sh/react",
+        "react/": "https://esm.sh/react/"
       }
     }),
   )
   .expect("could not pause the import map");
   let module = SWC::parse(filename, source, None).expect("could not parse module");
-  let resolver = Rc::new(RefCell::new(Resolver::new(filename, Some(importmap))));
+  let resolver = Rc::new(RefCell::new(Resolver::new(filename, Some(importmap.import_map))));
   let (code, source_map) = module.transform(resolver.clone(), options).unwrap();
   let code = unsafe { std::str::from_utf8_unchecked(&code).to_string() };
   let source_map = if let Some(source_map) = source_map {
@@ -92,8 +93,8 @@ fn module_analyzer() {
   "#;
   let (code, _, _) = transform("/foo/bar/index.js", source, &EmitOptions::default());
   assert!(code.contains("import \"/@hmr\""));
-  assert!(code.contains("from \"https://esm.sh/react@18\""));
-  assert!(code.contains("from \"https://esm.sh/react@18/jsx-runtime\""));
+  assert!(code.contains("from \"https://esm.sh/react\""));
+  assert!(code.contains("from \"https://esm.sh/react/jsx-runtime\""));
   assert!(code.contains("from \"/foo.ts?im=L2luZGV4Lmh0bWw\""));
   assert!(code.contains("from \"./foo.vue?im=L2luZGV4Lmh0bWw\""));
   assert!(code.contains("from \"./foo.svelte?im=L2luZGV4Lmh0bWw\""));
@@ -111,7 +112,7 @@ fn module_analyzer() {
   assert!(code.contains("import css from \"/style/app.css\" with {"));
   assert!(code.contains("import imgUrl from \"./img.png?url\""));
   assert!(code.contains("import imgRaw from \"./img.png?raw\""));
-  assert!(code.contains("import(\"https://esm.sh/react@18\")"));
+  assert!(code.contains("import(\"https://esm.sh/react\")"));
   assert!(code.contains("import(\"/style/app.css?module\")"));
   assert!(code.contains("import(\"/style/app.css\", {"));
   assert!(code.contains("    type: \"css\""));
@@ -222,7 +223,7 @@ fn tree_shaking() {
     let foo = "bar"
   "#;
   let (code, _, _) = transform("/test.js", source, &EmitOptions { ..Default::default() });
-  assert_eq!(code, "import React from \"https://esm.sh/react@18\";\nlet foo = \"bar\";\n");
+  assert_eq!(code, "import React from \"https://esm.sh/react\";\nlet foo = \"bar\";\n");
   let (code, _, _) = transform(
     "/test.js",
     source,
@@ -231,7 +232,7 @@ fn tree_shaking() {
       ..Default::default()
     },
   );
-  assert_eq!(code, "import \"https://esm.sh/react@18\";\n");
+  assert_eq!(code, "import \"https://esm.sh/react\";\n");
 }
 
 #[test]
