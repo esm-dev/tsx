@@ -52,7 +52,7 @@ async function test() {
     console.log(code);
     throw new Error("'react-dom/client' not resolved");
   }
-  if (!code.includes(`import App from "/App.tsx?im=L2luZGV4Lmh0bWw"`)) {
+  if (!code.includes(`import App from "/App.tsx"`)) {
     console.log(code);
     throw new Error("'/App.tsx' not resolved");
   }

@@ -1,5 +1,4 @@
 use crate::specifier::{is_abspath_specifier, is_http_specifier, is_relpath_specifier};
-use base64::{Engine as _, engine::general_purpose};
 use import_map::ImportMap;
 use path_slash::PathBufExt;
 use pathdiff::diff_paths;
@@ -77,19 +76,11 @@ impl Resolver {
     };
 
     let mut flag_raw_url = false;
-    let mut flag_jsx_vue_sevlte = false;
-    let mut flag_rpc = false;
     if let Some(query) = raw_query.as_ref() {
       for q in query.iter() {
         match q.as_str() {
           "raw" | "url" => {
             flag_raw_url = true;
-          }
-          "jsx" | "vue" | "svelte" => {
-            flag_jsx_vue_sevlte = true;
-          }
-          "rpc" => {
-            flag_rpc = true;
           }
           _ => {}
         }
@@ -98,33 +89,11 @@ impl Resolver {
 
     if is_filepath && !flag_raw_url {
       if let Some(ext) = Path::new(&resolved_url).extension() {
-        let extname = ext.to_str().unwrap();
-        match extname {
-          "js" | "mjs" | "ts" | "mts" | "jsx" | "tsx" | "vue" | "svelte" | "css" | "json" | "md" => {
-            if extname == "css" {
-              if with_type.is_none() {
-                extra_query = Some("module".to_owned());
-              }
-            } else if extname != "json" && (extname != "md" || flag_jsx_vue_sevlte) {
-              if let Some(base_url) = self.import_map.as_ref().map(|im| im.base_url()) {
-                let base_path = base_url.path();
-                if !base_path.eq("/anonymous_import_map.json") {
-                  let base_path_base64 = general_purpose::URL_SAFE_NO_PAD.encode(base_path.as_bytes());
-                  extra_query = Some("im=".to_owned() + base_path_base64.as_str());
-                }
-              }
-            }
+        if ext.to_str().unwrap_or_default() == "css" {
+          if with_type.unwrap_or_default() != "css" {
+            extra_query = Some("module".to_owned());
           }
-          _ => {}
         }
-      }
-    }
-
-    if with_type.is_some_and(|t| t == "rpc") && !flag_rpc {
-      if extra_query.is_none() {
-        extra_query = Some("rpc".to_owned());
-      } else {
-        extra_query = Some(extra_query.unwrap() + "&rpc");
       }
     }
 

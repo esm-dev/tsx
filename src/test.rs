@@ -82,7 +82,6 @@ fn module_analyzer() {
     import "https://esm.sh/react-dom@18"
     import "https://esm.sh/react-dom@18?dev"
     import data from "/data.json" with { type: "json" };
-    import { fn } from "/rpc.ts" with { type: "rpc" };
     import "../../style/app.css"
     import css from "../../style/app.css" with { type: "css" }
     import imgUrl from "./img.png?url"
@@ -95,19 +94,18 @@ fn module_analyzer() {
   assert!(code.contains("import \"/@hmr\""));
   assert!(code.contains("from \"https://esm.sh/react\""));
   assert!(code.contains("from \"https://esm.sh/react/jsx-runtime\""));
-  assert!(code.contains("from \"/foo.ts?im=L2luZGV4Lmh0bWw\""));
-  assert!(code.contains("from \"./foo.vue?im=L2luZGV4Lmh0bWw\""));
-  assert!(code.contains("from \"./foo.svelte?im=L2luZGV4Lmh0bWw\""));
+  assert!(code.contains("from \"/foo.ts\""));
+  assert!(code.contains("from \"./foo.vue\""));
+  assert!(code.contains("from \"./foo.svelte\""));
   assert!(code.contains("from \"./foo.md\""));
-  assert!(code.contains("from \"./foo.md?jsx&im=L2luZGV4Lmh0bWw\""));
-  assert!(code.contains("from \"./foo.md?vue&im=L2luZGV4Lmh0bWw\""));
-  assert!(code.contains("from \"./foo.md?svelte&im=L2luZGV4Lmh0bWw\""));
-  assert!(code.contains("from \"./Layout.tsx?im=L2luZGV4Lmh0bWw\""));
+  assert!(code.contains("from \"./foo.md?jsx\""));
+  assert!(code.contains("from \"./foo.md?vue\""));
+  assert!(code.contains("from \"./foo.md?svelte\""));
+  assert!(code.contains("from \"./Layout.tsx\""));
   assert!(code.contains("import \"https://esm.sh/react-dom@18\""));
   assert!(code.contains("import \"https://esm.sh/react-dom@18?dev\""));
   assert!(code.contains("import data from \"/data.json\" with {"));
   assert!(code.contains("    type: \"json\""));
-  assert!(code.contains("import { fn } from \"/rpc.ts?im=L2luZGV4Lmh0bWw&rpc\";"));
   assert!(code.contains("import \"/style/app.css?module\""));
   assert!(code.contains("import css from \"/style/app.css\" with {"));
   assert!(code.contains("import imgUrl from \"./img.png?url\""));
