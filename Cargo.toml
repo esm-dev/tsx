@@ -8,7 +8,7 @@ crate-type = ["cdylib", "rlib"]
 
 [dependencies]
 base64 = "0.22.1"
-indexmap = { version = "2.12.1", features = ["serde"] }
+indexmap = { version = "2.13.0", features = ["serde"] }
 import_map = "0.24.0"
 path-slash = "0.2.1"
 pathdiff = "0.2.3"
@@ -16,7 +16,7 @@ bytes-str = "0.2.7"
 percent-encoding = "2.3.2"
 serde = { version = "1.0.228", features = ["derive"] }
 serde_bytes = "0.11.19"
-serde_json = { version = "1.0.148", features = ["preserve_order"] }
+serde_json = { version = "1.0.149", features = ["preserve_order"] }
 thiserror = "2.0.17"
 url = { version = "2.5.8", features = ["serde"] }
 
