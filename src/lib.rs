@@ -114,12 +114,12 @@ pub fn transform(swc_transform_options: JsValue) -> Result<JsValue, JsError> {
     } else {
       Url::from_str(&("file://".to_owned() + filename.trim_start_matches('.'))).unwrap()
     };
-    if let Ok(resolved) = importmap.resolve("@jsxRuntime", &referrer) {
-      Some(resolved.to_string().trim_end_matches('/').to_string())
-    } else if let Ok(resolved) = importmap.resolve("react/jsx-runtime", &referrer) {
-      Some(resolved.to_string().trim_end_matches("/jsx-runtime").to_string())
-    } else if let Ok(resolved) = importmap.resolve("preact/jsx-runtime", &referrer) {
-      Some(resolved.to_string().trim_end_matches("/jsx-runtime").to_string())
+    if importmap.resolve("@jsxRuntime", &referrer).is_ok() {
+      Some("@jsxRuntime".to_owned())
+    } else if importmap.resolve("react/jsx-runtime", &referrer).is_ok() {
+      Some("react".to_owned())
+    } else if importmap.resolve("preact/jsx-runtime", &referrer).is_ok() {
+      Some("preact".to_owned())
     } else {
       None
     }
