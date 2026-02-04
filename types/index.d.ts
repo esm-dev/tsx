@@ -45,7 +45,7 @@ export interface TransformOptions {
   /** The import map, pass it if the browser does not support import maps. */
   importMap?: ImportMap;
   /**
-   * Specifies the JSX import source. By default, it will use `react/` or `preact/` from the import map.
+   * Specifies the JSX import source. if not specified, it will use `react/` or `preact/` from the import map.
    *
    * ```json
    * {
