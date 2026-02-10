@@ -114,17 +114,33 @@ pub fn transform(swc_transform_options: JsValue) -> Result<JsValue, JsError> {
     } else {
       Url::from_str(&("file://".to_owned() + filename.trim_start_matches('.'))).unwrap()
     };
-    if importmap.resolve("@jsxRuntime", &referrer).is_ok() {
-      Some("@jsxRuntime".to_owned())
-    } else if importmap.resolve("react/jsx-runtime", &referrer).is_ok() {
-      Some("react".to_owned())
-    } else if importmap.resolve("preact/jsx-runtime", &referrer).is_ok() {
-      Some("preact".to_owned())
+    let jsx_runtime_path = if options.dev.is_some() {
+      "/jsx-dev-runtime".to_owned()
     } else {
-      None
+      "/jsx-runtime".to_owned()
+    };
+    let specifier = importmap
+      .imports()
+      .keys()
+      .find(|k| k.ends_with(&jsx_runtime_path))
+      .map(|k| k.trim_end_matches(&jsx_runtime_path).to_owned());
+    if specifier.is_some() {
+      Some(specifier.unwrap())
+    } else {
+      let possible_jsx_libs = vec!["react", "preact", "solid-js", "mono-jsx/dom", "mono-jsx", "vue"];
+      let mut jsx_import_source = Some("react".to_owned());
+      for possible_jsx_lib in possible_jsx_libs {
+        let possible_jsx_import_source_path = possible_jsx_lib.to_owned();
+        let possible_jsx_import_source_path = possible_jsx_import_source_path + jsx_runtime_path.as_str();
+        if importmap.resolve(possible_jsx_import_source_path.as_str(), &referrer).is_ok() {
+          jsx_import_source = Some(possible_jsx_lib.to_owned());
+          break;
+        }
+      }
+      jsx_import_source
     }
   } else {
-    None
+    Some("react".to_owned())
   };
   let source_map = if let Some(source_map) = options.source_map {
     match source_map.as_str() {

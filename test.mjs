@@ -25,44 +25,80 @@ async function test() {
   const enc = new TextEncoder();
   const dec = new TextDecoder();
 
-  const source = `
+  {
+    const source = `
     import { createRoot } from "react-dom/client"
     import App from "./App.tsx"
 
     createRoot(document.getElementById("app")).render(<App />)
   `;
-  const ret = transform({
-    filename: "/source.tsx",
-    code: enc.encode(source),
-    importMap: {
-      "$src": "file:///index.html",
-      "imports": {
-        "react/": "https://esm.sh/react@18/",
-        "react-dom/": "https://esm.sh/react-dom@18/",
+    const ret = transform({
+      filename: "/source.tsx",
+      code: enc.encode(source),
+      importMap: {
+        "$src": "file:///index.html",
+        "imports": {
+          "react/": "https://esm.sh/react@18/",
+          "react-dom/": "https://esm.sh/react-dom@18/",
+        },
       },
-    },
-    sourceMap: "inline",
-  });
-  const code = dec.decode(ret.code);
-  if (!code.includes(`import { jsx as _jsx } from "https://esm.sh/react@18/jsx-runtime"`)) {
-    console.log(code);
-    throw new Error("jsx-runtime not imported");
+      sourceMap: "inline",
+    });
+    const code = dec.decode(ret.code);
+    if (!code.includes(`import { jsx as _jsx } from "https://esm.sh/react@18/jsx-runtime"`)) {
+      console.log(code);
+      throw new Error("jsx-runtime not imported");
+    }
+    if (!code.includes(`import { createRoot } from "https://esm.sh/react-dom@18/client"`)) {
+      console.log(code);
+      throw new Error("'react-dom/client' not resolved");
+    }
+    if (!code.includes(`import App from "/App.tsx"`)) {
+      console.log(code);
+      throw new Error("'/App.tsx' not resolved");
+    }
+    if (!code.includes(`_jsx(App`)) {
+      console.log(code);
+      throw new Error("jsx not transformed");
+    }
+    if (!code.includes("//# sourceMappingURL=data:application/json;charset=utf-8;base64,")) {
+      console.log(code);
+      throw new Error("source map not generated");
+    }
   }
-  if (!code.includes(`import { createRoot } from "https://esm.sh/react-dom@18/client"`)) {
-    console.log(code);
-    throw new Error("'react-dom/client' not resolved");
-  }
-  if (!code.includes(`import App from "/App.tsx"`)) {
-    console.log(code);
-    throw new Error("'/App.tsx' not resolved");
-  }
-  if (!code.includes(`_jsx(App`)) {
-    console.log(code);
-    throw new Error("jsx not transformed");
-  }
-  if (!code.includes("//# sourceMappingURL=data:application/json;charset=utf-8;base64,")) {
-    console.log(code);
-    throw new Error("source map not generated");
+
+  // use `jsxImportSource` option
+  {
+    let ret = transform({
+      filename: "/app.jsx",
+      code: enc.encode(`export default function App() { return <h1>Hello world!</h1> }`),
+      jsxImportSource: "preact",
+    });
+    let code = dec.decode(ret.code);
+    if (!code.includes(`import { jsx as _jsx } from "preact/jsx-runtime"`)) {
+      console.log(code);
+      throw new Error("jsx-runtime not imported");
+    }
+
+    ret = transform({
+      filename: "/app.jsx",
+      code: enc.encode(`export default function App() { return <h1>Hello world!</h1> }`),
+      jsxImportSource: "preact",
+      dev: {
+        jsxSource: {
+          fileName: "/app.jsx",
+        },
+      },
+    });
+    code = dec.decode(ret.code);
+    if (!code.includes(`import { jsxDEV as _jsxDEV } from "preact/jsx-dev-runtime"`)) {
+      console.log(code);
+      throw new Error("jsx-runtime not imported");
+    }
+    if (!code.includes(`fileName: "/app.jsx"`)) {
+      console.log(code);
+      throw new Error("jsx-source not set");
+    }
   }
 
   // catch syntax error
